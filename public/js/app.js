@@ -8,43 +8,43 @@ const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
 function toast(msg, type = 'info') {
-    const c = $('#toast-container');
-    const t = document.createElement('div');
-    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-    t.className = `toast toast-${type}`;
-    t.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
-    c.appendChild(t);
-    setTimeout(() => t.remove(), 3200);
+  const c = $('#toast-container');
+  const t = document.createElement('div');
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
 }
 
 function statusBadge(status) {
-    if (!status || status === 'pending') return `<span class="badge badge-pending">⏳ Pending</span>`;
-    if (status === 'success') return `<span class="badge badge-success">✅ Success</span>`;
-    if (status === 'fail') return `<span class="badge badge-fail">❌ Failed</span>`;
-    if (status === 'manual_done') return `<span class="badge badge-manual">👌 Manual</span>`;
-    return `<span class="badge badge-pending">${status}</span>`;
+  if (!status || status === 'pending') return `<span class="badge badge-pending">⏳ Pending</span>`;
+  if (status === 'success') return `<span class="badge badge-success">✅ Success</span>`;
+  if (status === 'fail') return `<span class="badge badge-fail">❌ Failed</span>`;
+  if (status === 'manual_done') return `<span class="badge badge-manual">👌 Manual</span>`;
+  return `<span class="badge badge-pending">${status}</span>`;
 }
 
 function todayVN() {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
 }
 
 function dayLabel(dateStr) {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const d = new Date(dateStr + 'T00:00:00+07:00');
-    return days[d.getDay()];
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const d = new Date(dateStr + 'T00:00:00+07:00');
+  return days[d.getDay()];
 }
 
 function setLoading(container, text = 'Loading...') {
-    container.innerHTML = `<div class="loading"><div class="spinner"></div>${text}</div>`;
+  container.innerHTML = `<div class="loading"><div class="spinner"></div>${text}</div>`;
 }
 
 // ── Auth Modal ────────────────────────────────────────────────
 function showAuthModal() {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.innerHTML = `
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
       <div class="modal">
         <div style="font-size:2rem;margin-bottom:12px;">🔐</div>
         <div class="modal-title">Enter Secret</div>
@@ -57,100 +57,100 @@ function showAuthModal() {
           <button class="btn btn-primary btn-full" id="secret-submit">Unlock Dashboard</button>
         </div>
       </div>`;
-        document.body.appendChild(overlay);
-        const input = $('#secret-input', overlay);
-        const btn = $('#secret-submit', overlay);
-        input.focus();
-        const submit = async () => {
-            const val = input.value.trim();
-            if (!val) return;
-            btn.disabled = true;
-            btn.textContent = 'Verifying...';
-            API.setSecret(val);
-            try {
-                await API.getState();
-                overlay.remove();
-                resolve(true);
-            } catch (e) {
-                if (e.message === 'AUTH_FAIL') {
-                    btn.disabled = false;
-                    btn.textContent = 'Unlock Dashboard';
-                    input.style.borderColor = 'var(--red)';
-                    toast('Invalid secret. Try again.', 'error');
-                    API.clearSecret();
-                } else {
-                    overlay.remove();
-                    resolve(true); // network error, proceed anyway
-                }
-            }
-        };
-        btn.addEventListener('click', submit);
-        input.addEventListener('keydown', e => e.key === 'Enter' && submit());
-    });
+    document.body.appendChild(overlay);
+    const input = $('#secret-input', overlay);
+    const btn = $('#secret-submit', overlay);
+    input.focus();
+    const submit = async () => {
+      const val = input.value.trim();
+      if (!val) return;
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      API.setSecret(val);
+      try {
+        await API.getState();
+        overlay.remove();
+        resolve(true);
+      } catch (e) {
+        if (e.message === 'AUTH_FAIL') {
+          btn.disabled = false;
+          btn.textContent = 'Unlock Dashboard';
+          input.style.borderColor = 'var(--red)';
+          toast('Invalid secret. Try again.', 'error');
+          API.clearSecret();
+        } else {
+          overlay.remove();
+          resolve(true); // network error, proceed anyway
+        }
+      }
+    };
+    btn.addEventListener('click', submit);
+    input.addEventListener('keydown', e => e.key === 'Enter' && submit());
+  });
 }
 
 // ── Lightbox ──────────────────────────────────────────────────
 function openLightbox(imageUrl, meta = '') {
-    const lb = document.createElement('div');
-    lb.className = 'lightbox';
-    lb.innerHTML = `
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.innerHTML = `
     <div class="lightbox-inner">
       <img src="${imageUrl}" alt="Punch screenshot" />
       <button class="lightbox-close" title="Close">✕</button>
       ${meta ? `<div class="lightbox-meta">${meta}</div>` : ''}
     </div>`;
-    document.body.appendChild(lb);
-    lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
-    $('.lightbox-close', lb).addEventListener('click', () => lb.remove());
-    document.addEventListener('keydown', function esc(e) {
-        if (e.key === 'Escape') { lb.remove(); document.removeEventListener('keydown', esc); }
-    });
+  document.body.appendChild(lb);
+  lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
+  $('.lightbox-close', lb).addEventListener('click', () => lb.remove());
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { lb.remove(); document.removeEventListener('keydown', esc); }
+  });
 }
 
 // ── Clock ─────────────────────────────────────────────────────
 function startClock() {
-    const el = $('#nav-clock');
-    if (!el) return;
-    const update = () => {
-        el.textContent = new Date().toLocaleTimeString('vi-VN', {
-            timeZone: 'Asia/Ho_Chi_Minh', hour12: false,
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-        }) + ' VN';
-    };
-    update();
-    setInterval(update, 1000);
+  const el = $('#nav-clock');
+  if (!el) return;
+  const update = () => {
+    el.textContent = new Date().toLocaleTimeString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh', hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }) + ' VN';
+  };
+  update();
+  setInterval(update, 1000);
 }
 
 // ── Router ────────────────────────────────────────────────────
 const routes = {
-    dashboard: renderDashboard,
-    history: renderHistory,
-    settings: renderSettings,
+  dashboard: renderDashboard,
+  history: renderHistory,
+  settings: renderSettings,
 };
 
 function navigate(page) {
-    window.location.hash = page;
+  window.location.hash = page;
 }
 
 function onHashChange() {
-    const hash = window.location.hash.replace('#', '') || 'dashboard';
-    const page = routes[hash] ? hash : 'dashboard';
-    $$('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
-    const app = $('#app');
-    setLoading(app);
-    routes[page](app);
+  const hash = window.location.hash.replace('#', '') || 'dashboard';
+  const page = routes[hash] ? hash : 'dashboard';
+  $$('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
+  const app = $('#app');
+  setLoading(app);
+  routes[page](app);
 }
 
 // ── Dashboard Page ────────────────────────────────────────────
 async function renderDashboard(container) {
-    try {
-        const data = await API.getState();
-        const { config, day, periods, date } = data;
-        const isEnabled = config.isEnabled;
-        const am = periods.am || { status: 'pending' };
-        const pm = periods.pm || { status: 'pending' };
+  try {
+    const data = await API.getState();
+    const { config, day, periods, date } = data;
+    const isEnabled = config.isEnabled;
+    const am = periods.am || { status: 'pending' };
+    const pm = periods.pm || { status: 'pending' };
 
-        container.innerHTML = `
+    container.innerHTML = `
       <div class="stack">
 
         <!-- System Status -->
@@ -160,13 +160,13 @@ async function renderDashboard(container) {
             <div class="status-hero-left">
               <div class="status-hero-title">
                 ${isEnabled
-                ? '<span class="badge badge-enabled">🟢 System Enabled</span>'
-                : '<span class="badge badge-disabled">🔴 System Disabled</span>'}
+        ? '<span class="badge badge-enabled">🟢 System Enabled</span>'
+        : '<span class="badge badge-disabled">🔴 System Disabled</span>'}
               </div>
               <div class="status-hero-sub">
                 ${day.isOff
-                ? `<span class="badge badge-off">🚫 Day OFF — ${date}</span>`
-                : `Today: <strong>${date}</strong> (${dayLabel(date)})`}
+        ? `<span class="badge badge-off">🚫 Day OFF — ${date}</span>`
+        : `Today: <strong>${date}</strong> (${dayLabel(date)})`}
               </div>
             </div>
             <div class="toggle-wrap">
@@ -212,81 +212,81 @@ async function renderDashboard(container) {
 
       </div>`;
 
-        // System toggle
-        $('#system-toggle', container).addEventListener('change', async (e) => {
-            const val = e.target.checked;
-            try {
-                await API.updateConfig(val);
-                toast(`System ${val ? 'enabled' : 'disabled'}`, 'success');
-                setTimeout(() => renderDashboard(container), 500);
-            } catch (err) {
-                toast(err.message, 'error');
-                e.target.checked = !val;
-            }
-        });
+    // System toggle
+    $('#system-toggle', container).addEventListener('change', async (e) => {
+      const val = e.target.checked;
+      try {
+        await API.updateConfig(val);
+        toast(`System ${val ? 'enabled' : 'disabled'}`, 'success');
+        setTimeout(() => renderDashboard(container), 500);
+      } catch (err) {
+        toast(err.message, 'error');
+        e.target.checked = !val;
+      }
+    });
 
-        // Mark Done AM
-        $('#qa-mark-am', container).addEventListener('click', async () => {
-            try {
-                await API.markDone('am');
-                toast('AM marked as done ✅', 'success');
-                setTimeout(() => renderDashboard(container), 500);
-            } catch (err) { toast(err.message, 'error'); }
-        });
+    // Mark Done AM
+    $('#qa-mark-am', container).addEventListener('click', async () => {
+      try {
+        await API.markDone('am');
+        toast('AM marked as done ✅', 'success');
+        setTimeout(() => renderDashboard(container), 500);
+      } catch (err) { toast(err.message, 'error'); }
+    });
 
-        // Mark Done PM
-        $('#qa-mark-pm', container).addEventListener('click', async () => {
-            try {
-                await API.markDone('pm');
-                toast('PM marked as done ✅', 'success');
-                setTimeout(() => renderDashboard(container), 500);
-            } catch (err) { toast(err.message, 'error'); }
-        });
+    // Mark Done PM
+    $('#qa-mark-pm', container).addEventListener('click', async () => {
+      try {
+        await API.markDone('pm');
+        toast('PM marked as done ✅', 'success');
+        setTimeout(() => renderDashboard(container), 500);
+      } catch (err) { toast(err.message, 'error'); }
+    });
 
-        // WFH Now
-        $('#qa-wfh', container).addEventListener('click', async () => {
-            const btn = $('#qa-wfh', container);
-            btn.disabled = true; btn.textContent = '⏳ Triggering...';
-            try {
-                await API.markWfhToday();
-                toast('WFH punch triggered! GHA is running 🚀', 'success');
-            } catch (err) { toast(err.message, 'error'); }
-            finally { btn.disabled = false; btn.textContent = '🏠 WFH Punch Now'; }
-        });
+    // WFH Now
+    $('#qa-wfh', container).addEventListener('click', async () => {
+      const btn = $('#qa-wfh', container);
+      btn.disabled = true; btn.textContent = '⏳ Triggering...';
+      try {
+        await API.markWfhToday();
+        toast('WFH punch triggered! GHA is running 🚀', 'success');
+      } catch (err) { toast(err.message, 'error'); }
+      finally { btn.disabled = false; btn.textContent = '🏠 WFH Punch Now'; }
+    });
 
-        // Mark OFF
-        $('#qa-off', container).addEventListener('click', async () => {
-            if (!confirm(`Mark ${date} as OFF? No reminders will be sent.`)) return;
-            try {
-                await API.markOff(date);
-                toast(`${date} marked as OFF 🚫`, 'success');
-                setTimeout(() => renderDashboard(container), 500);
-            } catch (err) { toast(err.message, 'error'); }
-        });
+    // Mark OFF
+    $('#qa-off', container).addEventListener('click', async () => {
+      if (!confirm(`Mark ${date} as OFF? No reminders will be sent.`)) return;
+      try {
+        await API.markOff(date);
+        toast(`${date} marked as OFF 🚫`, 'success');
+        setTimeout(() => renderDashboard(container), 500);
+      } catch (err) { toast(err.message, 'error'); }
+    });
 
-        // Clear OFF
-        const clearBtn = $('#qa-clear-off', container);
-        if (clearBtn) {
-            clearBtn.addEventListener('click', async () => {
-                try {
-                    await API.clearOff(date);
-                    toast(`OFF cleared for ${date} ✅`, 'success');
-                    setTimeout(() => renderDashboard(container), 500);
-                } catch (err) { toast(err.message, 'error'); }
-            });
-        }
-
-        // Expose lightbox globally for inline onclick
-        window._openLightbox = openLightbox;
-
-    } catch (err) {
-        container.innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${err.message}</div></div></div>`;
+    // Clear OFF
+    const clearBtn = $('#qa-clear-off', container);
+    if (clearBtn) {
+      clearBtn.addEventListener('click', async () => {
+        try {
+          await API.clearOff(date);
+          toast(`OFF cleared for ${date} ✅`, 'success');
+          setTimeout(() => renderDashboard(container), 500);
+        } catch (err) { toast(err.message, 'error'); }
+      });
     }
+
+    // Expose lightbox globally for inline onclick
+    window._openLightbox = openLightbox;
+
+  } catch (err) {
+    container.innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${err.message}</div></div></div>`;
+  }
 }
 
 // ── History Page ──────────────────────────────────────────────
 async function renderHistory(container) {
-    container.innerHTML = `
+  container.innerHTML = `
     <div class="stack">
       <div class="section-header">
         <div class="section-title">📋 Punch History</div>
@@ -309,43 +309,43 @@ async function renderHistory(container) {
       <div id="hist-list"><div class="loading"><div class="spinner"></div>Loading history...</div></div>
     </div>`;
 
-    let currentFilter = 'all';
-    let records = [];
+  let currentFilter = 'all';
+  let records = [];
 
-    const loadHistory = async () => {
-        const days = parseInt($('#hist-days', container).value, 10);
-        const list = $('#hist-list', container);
-        setLoading(list, 'Fetching records...');
-        try {
-            const data = await API.getHistory(days);
-            records = data.records || [];
-            renderList();
-        } catch (err) {
-            list.innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${err.message}</div></div></div>`;
-        }
-    };
+  const loadHistory = async () => {
+    const days = parseInt($('#hist-days', container).value, 10);
+    const list = $('#hist-list', container);
+    setLoading(list, 'Fetching records...');
+    try {
+      const data = await API.getHistory(days);
+      records = data.records || [];
+      renderList();
+    } catch (err) {
+      list.innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${err.message}</div></div></div>`;
+    }
+  };
 
-    const renderList = () => {
-        const list = $('#hist-list', container);
-        let filtered = records;
-        if (currentFilter === 'off') filtered = records.filter(r => r.day.isOff);
-        else if (currentFilter === 'success') filtered = records.filter(r => r.periods.am.status === 'success' || r.periods.pm.status === 'success');
-        else if (currentFilter === 'fail') filtered = records.filter(r => r.periods.am.status === 'fail' || r.periods.pm.status === 'fail');
-        else if (currentFilter === 'manual_done') filtered = records.filter(r => r.periods.am.status === 'manual_done' || r.periods.pm.status === 'manual_done');
+  const renderList = () => {
+    const list = $('#hist-list', container);
+    let filtered = records;
+    if (currentFilter === 'off') filtered = records.filter(r => r.day.isOff);
+    else if (currentFilter === 'success') filtered = records.filter(r => r.periods.am.status === 'success' || r.periods.pm.status === 'success');
+    else if (currentFilter === 'fail') filtered = records.filter(r => r.periods.am.status === 'fail' || r.periods.pm.status === 'fail');
+    else if (currentFilter === 'manual_done') filtered = records.filter(r => r.periods.am.status === 'manual_done' || r.periods.pm.status === 'manual_done');
 
-        if (!filtered.length) {
-            list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No records found</div></div>`;
-            return;
-        }
+    if (!filtered.length) {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No records found</div></div>`;
+      return;
+    }
 
-        list.innerHTML = `<div class="history-list">${filtered.map(r => {
-            const am = r.periods.am || { status: 'pending' };
-            const pm = r.periods.pm || { status: 'pending' };
-            const isOff = r.day.isOff;
-            const label = dayLabel(r.date);
-            const isToday = r.date === todayVN();
+    list.innerHTML = `<div class="history-list">${filtered.map(r => {
+      const am = r.periods.am || { status: 'pending' };
+      const pm = r.periods.pm || { status: 'pending' };
+      const isOff = r.day.isOff;
+      const label = dayLabel(r.date);
+      const isToday = r.date === todayVN();
 
-            return `<div class="history-row ${isToday ? 'card' : ''}">
+      return `<div class="history-row ${isToday ? 'card' : ''}">
         <div>
           <div class="history-date">${r.date} ${isToday ? '🔵' : ''}</div>
           <div class="history-day-label">${label}${isOff ? ' · <span class="badge badge-off" style="font-size:0.65rem;padding:2px 6px">OFF</span>' : ''}</div>
@@ -363,30 +363,30 @@ async function renderHistory(container) {
           ${pm.imageUrl ? `<button class="thumb-btn" title="PM Screenshot" onclick="window._openLightbox('${pm.imageUrl}', 'PM — ${r.date}')">📷</button>` : ''}
         </div>
       </div>`;
-        }).join('')}</div>`;
-    };
+    }).join('')}</div>`;
+  };
 
-    // Filter chips
-    $$('.filter-chip', container).forEach(chip => {
-        chip.addEventListener('click', () => {
-            $$('.filter-chip', container).forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-            currentFilter = chip.dataset.filter;
-            renderList();
-        });
+  // Filter chips
+  $$('.filter-chip', container).forEach(chip => {
+    chip.addEventListener('click', () => {
+      $$('.filter-chip', container).forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter;
+      renderList();
     });
+  });
 
-    $('#hist-days', container).addEventListener('change', loadHistory);
-    $('#hist-refresh', container).addEventListener('click', loadHistory);
-    window._openLightbox = openLightbox;
+  $('#hist-days', container).addEventListener('change', loadHistory);
+  $('#hist-refresh', container).addEventListener('click', loadHistory);
+  window._openLightbox = openLightbox;
 
-    await loadHistory();
+  await loadHistory();
 }
 
 // ── Settings Page ─────────────────────────────────────────────
 async function renderSettings(container) {
-    const today = todayVN();
-    container.innerHTML = `
+  const today = todayVN();
+  container.innerHTML = `
     <div class="stack">
       <div class="section-title">⚙️ Settings & Controls</div>
 
@@ -473,90 +473,110 @@ async function renderSettings(container) {
 
     </div>`;
 
-    // Enable
-    $('#s-enable', container).addEventListener('click', async () => {
-        try { await API.updateConfig(true); toast('System enabled 🟢', 'success'); }
-        catch (e) { toast(e.message, 'error'); }
-    });
+  // Enable
+  $('#s-enable', container).addEventListener('click', async () => {
+    try { await API.updateConfig(true); toast('System enabled 🟢', 'success'); }
+    catch (e) { toast(e.message, 'error'); }
+  });
 
-    // Disable
-    $('#s-disable', container).addEventListener('click', async () => {
-        if (!confirm('Disable the auto-punch system?')) return;
-        try { await API.updateConfig(false); toast('System disabled 🔴', 'success'); }
-        catch (e) { toast(e.message, 'error'); }
-    });
+  // Disable
+  $('#s-disable', container).addEventListener('click', async () => {
+    if (!confirm('Disable the auto-punch system?')) return;
+    try { await API.updateConfig(false); toast('System disabled 🔴', 'success'); }
+    catch (e) { toast(e.message, 'error'); }
+  });
 
-    // Mark OFF
-    $('#s-mark-off', container).addEventListener('click', async () => {
-        const date = $('#s-off-date', container).value;
-        if (!date) return toast('Select a date', 'error');
-        try { await API.markOff(date); toast(`${date} marked as OFF 🚫`, 'success'); }
-        catch (e) { toast(e.message, 'error'); }
-    });
+  // Mark OFF
+  $('#s-mark-off', container).addEventListener('click', async () => {
+    const date = $('#s-off-date', container).value;
+    if (!date) return toast('Select a date', 'error');
+    try { await API.markOff(date); toast(`${date} marked as OFF 🚫`, 'success'); }
+    catch (e) { toast(e.message, 'error'); }
+  });
 
-    // Clear OFF
-    $('#s-clear-off', container).addEventListener('click', async () => {
-        const date = $('#s-off-date', container).value;
-        if (!date) return toast('Select a date', 'error');
-        try { await API.clearOff(date); toast(`OFF cleared for ${date} ✅`, 'success'); }
-        catch (e) { toast(e.message, 'error'); }
-    });
+  // Clear OFF
+  $('#s-clear-off', container).addEventListener('click', async () => {
+    const date = $('#s-off-date', container).value;
+    if (!date) return toast('Select a date', 'error');
+    try { await API.clearOff(date); toast(`OFF cleared for ${date} ✅`, 'success'); }
+    catch (e) { toast(e.message, 'error'); }
+  });
 
-    // Mark Done
-    $('#s-mark-done', container).addEventListener('click', async () => {
-        const date = $('#s-done-date', container).value;
-        const period = $('#s-done-period', container).value;
-        try { await API.markDone(period, date); toast(`${period.toUpperCase()} on ${date} marked done 👌`, 'success'); }
-        catch (e) { toast(e.message, 'error'); }
-    });
+  // Mark Done
+  $('#s-mark-done', container).addEventListener('click', async () => {
+    const date = $('#s-done-date', container).value;
+    const period = $('#s-done-period', container).value;
+    try { await API.markDone(period, date); toast(`${period.toUpperCase()} on ${date} marked done 👌`, 'success'); }
+    catch (e) { toast(e.message, 'error'); }
+  });
 
-    // WFH
-    $('#s-wfh', container).addEventListener('click', async () => {
-        const btn = $('#s-wfh', container);
-        btn.disabled = true; btn.textContent = '⏳ Triggering...';
-        try { await API.markWfhToday(); toast('WFH punch triggered! GHA running 🚀', 'success'); }
-        catch (e) { toast(e.message, 'error'); }
-        finally { btn.disabled = false; btn.textContent = '🏠 Trigger WFH Punch Now'; }
-    });
+  // WFH
+  $('#s-wfh', container).addEventListener('click', async () => {
+    const btn = $('#s-wfh', container);
+    btn.disabled = true; btn.textContent = '⏳ Triggering...';
+    try { await API.markWfhToday(); toast('WFH punch triggered! GHA running 🚀', 'success'); }
+    catch (e) { toast(e.message, 'error'); }
+    finally { btn.disabled = false; btn.textContent = '🏠 Trigger WFH Punch Now'; }
+  });
 
-    // Debug
-    $('#s-debug-load', container).addEventListener('click', async () => {
-        const out = $('#s-debug-output', container);
-        out.style.display = 'block';
-        out.textContent = 'Loading...';
-        try {
-            const data = await API.getState();
-            out.textContent = JSON.stringify(data, null, 2);
-        } catch (e) { out.textContent = `Error: ${e.message}`; }
-    });
+  // Debug
+  $('#s-debug-load', container).addEventListener('click', async () => {
+    const out = $('#s-debug-output', container);
+    out.style.display = 'block';
+    out.textContent = 'Loading...';
+    try {
+      const data = await API.getState();
+      out.textContent = JSON.stringify(data, null, 2);
+    } catch (e) { out.textContent = `Error: ${e.message}`; }
+  });
 
-    // Change secret
-    $('#s-save-secret', container).addEventListener('click', () => {
-        const val = $('#s-new-secret', container).value.trim();
-        if (!val) return toast('Enter a secret', 'error');
-        API.setSecret(val);
-        toast('Secret updated ✅', 'success');
-        $('#s-new-secret', container).value = '';
-    });
+  // Change secret
+  $('#s-save-secret', container).addEventListener('click', () => {
+    const val = $('#s-new-secret', container).value.trim();
+    if (!val) return toast('Enter a secret', 'error');
+    API.setSecret(val);
+    toast('Secret updated ✅', 'success');
+    $('#s-new-secret', container).value = '';
+  });
 }
 
 // ── Boot ──────────────────────────────────────────────────────
-async function boot() {
-    startClock();
+const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
-    // Nav tab clicks
-    $$('.nav-tab').forEach(tab => {
-        tab.addEventListener('click', () => navigate(tab.dataset.page));
-    });
-
-    // Auth check
-    if (!API.hasSecret()) {
-        await showAuthModal();
+async function tryAutoFillSecret() {
+  if (!IS_LOCAL) return false;
+  try {
+    const res = await fetch('/api/dev-secret');
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data.ok && data.secret) {
+      API.setSecret(data.secret);
+      console.info('[dev] Secret auto-filled from env ✅');
+      return true;
     }
+  } catch (_) { /* ignore */ }
+  return false;
+}
 
-    // Initial route
-    window.addEventListener('hashchange', onHashChange);
-    onHashChange();
+async function boot() {
+  startClock();
+
+  // Nav tab clicks
+  $$('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => navigate(tab.dataset.page));
+  });
+
+  // Auth: try auto-fill from env (local dev only), else show modal
+  if (!API.hasSecret()) {
+    const autoFilled = await tryAutoFillSecret();
+    if (!autoFilled) {
+      await showAuthModal();
+    }
+  }
+
+  // Initial route
+  window.addEventListener('hashchange', onHashChange);
+  onHashChange();
 }
 
 boot();

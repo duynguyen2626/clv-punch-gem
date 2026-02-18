@@ -4,6 +4,7 @@
   "description": "Automated check-in system for Cyberlogitec Blueprint.",
   "main": "index.js",
   "scripts": {
+    "dev": "vercel dev",
     "test": "npx playwright test",
     "dev:api": "npx vercel dev --yes"
   },
