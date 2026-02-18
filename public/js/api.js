@@ -1,0 +1,88 @@
+// File: public/js/api.js
+// Centralized API client for Auto Punch Dashboard
+
+const BASE = '';
+
+// ── Auth ──────────────────────────────────────────────────────
+let _secret = sessionStorage.getItem('punch_secret') || '';
+
+export function getSecret() { return _secret; }
+export function setSecret(s) {
+    _secret = s;
+    sessionStorage.setItem('punch_secret', s);
+}
+export function clearSecret() {
+    _secret = '';
+    sessionStorage.removeItem('punch_secret');
+}
+export function hasSecret() { return !!_secret; }
+
+// ── Fetch helpers ─────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Secret': _secret,
+        ...(options.headers || {}),
+    };
+    const res = await fetch(BASE + path, { ...options, headers });
+    const data = await res.json();
+    if (!data.ok && res.status === 403) {
+        throw new Error('AUTH_FAIL');
+    }
+    if (!data.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    return data;
+}
+
+async function apiGet(path) {
+    const sep = path.includes('?') ? '&' : '?';
+    return apiFetch(`${path}${sep}secret=${encodeURIComponent(_secret)}`, { method: 'GET' });
+}
+
+async function apiPost(path, body = {}) {
+    return apiFetch(path, {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+}
+
+// ── API methods ───────────────────────────────────────────────
+
+/** GET /api/state — today's full state */
+export async function getState(date) {
+    const q = date ? `?date=${date}&secret=${encodeURIComponent(_secret)}` : `?secret=${encodeURIComponent(_secret)}`;
+    return apiFetch(`/api/state${q}`, { method: 'GET' });
+}
+
+/** GET /api/history — last N days */
+export async function getHistory(days = 30) {
+    return apiGet(`/api/history?days=${days}`);
+}
+
+/** POST /api/update-config — enable/disable system */
+export async function updateConfig(isEnabled) {
+    return apiPost('/api/update-config', { isEnabled });
+}
+
+/** POST /api/mark-done — mark period as manually done */
+export async function markDone(period, date) {
+    const body = { period };
+    if (date) body.date = date;
+    return apiPost('/api/mark-done', body);
+}
+
+/** POST /api/mark-off — mark a day as OFF */
+export async function markOff(date) {
+    return apiPost('/api/mark-off', { date });
+}
+
+/** POST /api/clear-off — clear OFF for a day */
+export async function clearOff(date) {
+    return apiPost('/api/clear-off', { date });
+}
+
+/** POST /api/mark-wfh-today — trigger immediate WFH punch */
+export async function markWfhToday() {
+    return apiPost('/api/mark-wfh-today', {});
+}

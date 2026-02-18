@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto Punch — Dashboard</title>
+  <meta name="description" content="Auto Punch management dashboard for Cyberlogitec Blueprint check-in system." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👊</text></svg>" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a class="nav-logo" href="#dashboard">
+      <div class="logo-icon">👊</div>
+      <span>Auto Punch</span>
+    </a>
+
+    <button class="nav-tab active" data-page="dashboard">
+      <span>🏠</span><span>Dashboard</span>
+    </button>
+    <button class="nav-tab" data-page="history">
+      <span>📋</span><span>History</span>
+    </button>
+    <button class="nav-tab" data-page="settings">
+      <span>⚙️</span><span>Settings</span>
+    </button>
+
+    <div class="nav-clock" id="nav-clock">--:--:-- VN</div>
+  </nav>
+
+  <!-- App container -->
+  <main id="app">
+    <div class="loading">
+      <div class="spinner"></div>
+      Loading dashboard...
+    </div>
+  </main>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- App script (ES module) -->
+  <script type="module" src="/js/app.js"></script>
+
+</body>
+</html>
