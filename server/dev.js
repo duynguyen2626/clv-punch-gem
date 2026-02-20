@@ -143,6 +143,10 @@ async function handleStatic(req, res, urlObj) {
 async function handler(req, res) {
   addResponseHelpers(res);
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  
+  const startTime = Date.now();
+  const method = req.method;
+  const path = urlObj.pathname;
 
   if (urlObj.pathname.startsWith('/api/')) {
     try {
@@ -153,10 +157,23 @@ async function handler(req, res) {
         res.status(500).json({ ok: false, error: 'Server error' });
       }
     }
+    const duration = Date.now() - startTime;
+    const status = res.statusCode || 500;
+    const statusColor = status >= 400 ? '\x1b[91m' : '\x1b[92m';
+    console.log(`${statusColor}${status}\x1b[0m ${method} ${path} (${duration}ms)`);
     return;
   }
 
-  return handleStatic(req, res, urlObj);
+  try {
+    await handleStatic(req, res, urlObj);
+  } catch (error) {
+    console.error(error);
+  }
+  
+  const duration = Date.now() - startTime;
+  const status = res.statusCode || 200;
+  const statusColor = status >= 400 ? '\x1b[91m' : '\x1b[92m';
+  console.log(`${statusColor}${status}\x1b[0m ${method} ${path} (${duration}ms)`);
 }
 
 function listenWithFallback(server, port, maxAttempts) {
@@ -180,9 +197,14 @@ const server = http.createServer(handler);
 
 listenWithFallback(server, port, 10)
   .then((boundPort) => {
-    console.log(`Local dev server running at http://localhost:${boundPort}`);
+    console.log('\n═══════════════════════════════════════════════════════════');
+    console.log('  ✅ Local dev server started');
+    console.log(`  🌐 URL: http://localhost:${boundPort}`);
+    console.log(`  📁 Public: ${publicDir}`);
+    console.log(`  🔌 API: /api/* routes active`);
+    console.log('═══════════════════════════════════════════════════════════\n');
   })
   .catch((error) => {
-    console.error('Failed to start dev server:', error.message);
+    console.error('\n❌ Failed to start dev server:', error.message);
     process.exit(1);
   });

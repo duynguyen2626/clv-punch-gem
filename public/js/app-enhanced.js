@@ -761,7 +761,8 @@ async function renderHistory(container) {
 
 async function renderSettings(container) {
     const data = await API.getState();
-    const { schedule, telegram, times } = data.config;
+    const { schedule, times } = data.config;
+    const telegram = data.config.telegram || { token: '', chatId: '' };
 
     container.innerHTML = `
         <div class="max-w-3xl mx-auto space-y-8 animate-in pb-20">
