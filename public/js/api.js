@@ -67,37 +67,37 @@ export async function getHistory(days = 30) {
     return apiGet(`/api/history?days=${days}`);
 }
 
-/** POST /api/update-config — enable/disable system */
+/** POST /api/updates — enable/disable system */
 export async function updateConfig(isEnabled) {
-    return apiPost('/api/update-config', { isEnabled });
+    return apiPost('/api/updates', { type: 'updateConfig', isEnabled });
 }
 
-/** POST /api/mark-done — mark period as manually done */
+/** POST /api/actions — mark period as manually done */
 export async function markDone(period, date, clear = false) {
-    const body = { period };
+    const body = { action: 'markDone', period };
     if (date) body.date = date;
     if (clear) body.clear = true;
-    return apiPost('/api/mark-done', body);
+    return apiPost('/api/actions', body);
 }
 
-/** POST /api/mark-off — mark a day as OFF */
+/** POST /api/actions — mark a day as OFF */
 export async function markOff(date) {
-    return apiPost('/api/mark-off', { date });
+    return apiPost('/api/actions', { action: 'markOff', date });
 }
 
-/** POST /api/mark-off — dải ngày */
+/** POST /api/actions — dải ngày */
 export async function markOffRange(startDate, endDate) {
-    return apiPost('/api/mark-off', { startDate, endDate });
+    return apiPost('/api/actions', { action: 'markOff', startDate, endDate });
 }
 
-/** POST /api/clear-off — clear OFF for a day */
+/** POST /api/actions — clear OFF for a day */
 export async function clearOff(date) {
-    return apiPost('/api/clear-off', { date });
+    return apiPost('/api/actions', { action: 'clearOff', date });
 }
 
-/** POST /api/mark-wfh-today — trigger immediate WFH punch */
+/** POST /api/actions — trigger immediate WFH punch */
 export async function markWfhToday() {
-    return apiPost('/api/mark-wfh-today', {});
+    return apiPost('/api/actions', { action: 'markWfhToday' });
 }
 
 /** GET /api/dev-secret — get secret from env (dev only) */
