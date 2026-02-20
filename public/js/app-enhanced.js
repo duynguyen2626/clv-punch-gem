@@ -107,7 +107,7 @@ function showMarkOffModal(dateHint = Utils.todayVN()) {
             <div class="modal-content scale-in-95 animate-in">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <i data-lucide="palm-tree" class="w-5 h-5 text-orange-500"></i>
+                        <span class="text-2xl">🌴</span>
                         <h2 class="text-xl font-black">Set Vacation</h2>
                     </div>
                     <button class="modal-close p-1 hover:bg-muted rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -290,6 +290,29 @@ async function renderDashboard(container) {
                 ${Charts.renderStatCard('clock', 'Late Punches', monthlyStats.latePunches, 'This month', 'info')}
             </div>
 
+            <!-- Quick Actions -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-black uppercase tracking-widest text-muted-foreground/40 px-1">Actions</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <button id="qa-wfh" class="btn btn-primary h-20 flex-col !gap-1.5 shadow-lg hover:-translate-y-1 transition-transform">
+                        <i data-lucide="rocket" class="w-6 h-6"></i>
+                        <span class="text-[9px] font-black uppercase tracking-wide">Punch Now</span>
+                    </button>
+                    <button id="qa-range-off" class="btn btn-outline h-20 flex-col !gap-1.5 border-dashed hover:border-solid hover:-translate-y-1 transition-all group">
+                        <span class="text-3xl">🌴</span>
+                        <span class="text-[9px] font-black uppercase tracking-wide">Vacation</span>
+                    </button>
+                    <button id="qa-mark-am" class="btn btn-outline h-20 flex-col !gap-1.5 hover:-translate-y-1 transition-transform group">
+                        <i data-lucide="sun" class="w-6 h-6 text-orange-400 opacity-60 group-hover:opacity-100"></i>
+                        <span class="text-[9px] font-black uppercase tracking-wide">Skip AM</span>
+                    </button>
+                    <button id="qa-mark-pm" class="btn btn-outline h-20 flex-col !gap-1.5 hover:-translate-y-1 transition-transform group">
+                        <i data-lucide="moon" class="w-6 h-6 text-indigo-400 opacity-60 group-hover:opacity-100"></i>
+                        <span class="text-[9px] font-black uppercase tracking-wide">Skip PM</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Activity Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- AM/PM Status -->
@@ -334,36 +357,13 @@ async function renderDashboard(container) {
 
                 <!-- Mini Calendar & Weekly Activity -->
                 <div class="space-y-4">
-                    <h3 class="text-sm font-black uppercase tracking-widest text-muted-foreground/40 px-1">Activity Overview</h3>
+                    <h3 class="text-sm font-black uppercase tracking-widest text-muted-foreground/40 px-1">Calendar</h3>
                     <div class="card">
                         ${Charts.renderWeeklyActivity(records)}
                     </div>
                     <div id="mini-calendar-container">
                         ${Charts.renderMiniCalendar(records, date)}
                     </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="space-y-4">
-                <h3 class="text-sm font-black uppercase tracking-widest text-muted-foreground/40 px-1">Quick Actions</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <button id="qa-wfh" class="btn btn-primary h-24 flex-col !gap-2 shadow-xl hover:-translate-y-1">
-                        <i data-lucide="rocket" class="w-7 h-7"></i>
-                        <span class="text-[10px] font-black uppercase tracking-widest">Punch Now</span>
-                    </button>
-                    <button id="qa-range-off" class="btn btn-outline h-24 flex-col !gap-2 border-dashed hover:border-solid hover:-translate-y-1 group">
-                        <i data-lucide="palm-tree" class="w-7 h-7 text-orange-500 group-hover:scale-110 transition-transform"></i>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Set Vacation</span>
-                    </button>
-                    <button id="qa-mark-am" class="btn btn-outline h-24 flex-col !gap-2 hover:-translate-y-1 group">
-                        <i data-lucide="sun" class="w-7 h-7 text-orange-400 opacity-60 group-hover:opacity-100"></i>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Skip AM</span>
-                    </button>
-                    <button id="qa-mark-pm" class="btn btn-outline h-24 flex-col !gap-2 hover:-translate-y-1 group">
-                        <i data-lucide="moon" class="w-7 h-7 text-indigo-400 opacity-60 group-hover:opacity-100"></i>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Skip PM</span>
-                    </button>
                 </div>
             </div>
 

@@ -1,0 +1,188 @@
+const http = require('http');
+const path = require('path');
+const fs = require('fs');
+const { URL } = require('url');
+
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const publicDir = path.resolve(__dirname, '../public');
+const apiDir = path.resolve(__dirname, '../api');
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+};
+
+function addResponseHelpers(res) {
+  res.status = (code) => {
+    res.statusCode = code;
+    return res;
+  };
+  res.json = (data) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(data));
+  };
+  res.send = (data) => {
+    if (Buffer.isBuffer(data)) {
+      res.end(data);
+      return;
+    }
+    if (typeof data === 'object') {
+      res.json(data);
+      return;
+    }
+    res.end(String(data));
+  };
+  return res;
+}
+
+async function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+function toQueryObject(searchParams) {
+  const query = {};
+  for (const [key, value] of searchParams.entries()) {
+    query[key] = value;
+  }
+  return query;
+}
+
+async function handleApi(req, res, urlObj) {
+  const routePath = urlObj.pathname.replace(/^\/api\/?/, '').replace(/\/$/, '');
+  if (!routePath) {
+    return res.status(404).json({ ok: false, error: 'Not found' });
+  }
+
+  const apiFile = path.join(apiDir, `${routePath}.js`);
+  if (!apiFile.startsWith(apiDir) || !fs.existsSync(apiFile)) {
+    return res.status(404).json({ ok: false, error: 'Not found' });
+  }
+
+  req.query = toQueryObject(urlObj.searchParams);
+
+  const contentType = req.headers['content-type'] || '';
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    const rawBody = await readRequestBody(req);
+    if (contentType.includes('application/json') && rawBody) {
+      try {
+        req.body = JSON.parse(rawBody);
+      } catch (error) {
+        req.body = rawBody;
+      }
+    } else {
+      req.body = rawBody;
+    }
+  } else {
+    req.body = {};
+  }
+
+  const mod = require(apiFile);
+  const handler = mod.default || mod;
+  if (typeof handler !== 'function') {
+    return res.status(500).json({ ok: false, error: 'Invalid API handler' });
+  }
+
+  return handler(req, res);
+}
+
+function safePathFromUrl(urlPath) {
+  const decoded = decodeURIComponent(urlPath.split('?')[0]);
+  const normalized = path.normalize(decoded).replace(/^\/+/, '');
+  const filePath = path.join(publicDir, normalized);
+  if (!filePath.startsWith(publicDir)) {
+    return null;
+  }
+  return filePath;
+}
+
+async function handleStatic(req, res, urlObj) {
+  let filePath = safePathFromUrl(urlObj.pathname);
+  if (!filePath) {
+    return res.status(400).send('Bad request');
+  }
+
+  if (urlObj.pathname === '/' || urlObj.pathname === '') {
+    filePath = path.join(publicDir, 'index.html');
+  }
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('Not found');
+  }
+
+  const stat = fs.statSync(filePath);
+  if (stat.isDirectory()) {
+    const indexPath = path.join(filePath, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      return res.status(404).send('Not found');
+    }
+    filePath = indexPath;
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+  res.setHeader('Content-Type', contentType);
+  const stream = fs.createReadStream(filePath);
+  stream.on('error', () => res.status(500).send('Server error'));
+  stream.pipe(res);
+}
+
+async function handler(req, res) {
+  addResponseHelpers(res);
+  const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+  if (urlObj.pathname.startsWith('/api/')) {
+    try {
+      await handleApi(req, res, urlObj);
+    } catch (error) {
+      console.error(error);
+      if (!res.headersSent) {
+        res.status(500).json({ ok: false, error: 'Server error' });
+      }
+    }
+    return;
+  }
+
+  return handleStatic(req, res, urlObj);
+}
+
+function listenWithFallback(server, port, maxAttempts) {
+  return new Promise((resolve, reject) => {
+    const attempt = (currentPort, attemptsLeft) => {
+      server.listen(currentPort, () => resolve(currentPort));
+      server.once('error', (error) => {
+        if (error.code === 'EADDRINUSE' && attemptsLeft > 0) {
+          server.close(() => attempt(currentPort + 1, attemptsLeft - 1));
+          return;
+        }
+        reject(error);
+      });
+    };
+    attempt(port, maxAttempts);
+  });
+}
+
+const port = Number(process.env.PORT || 3000);
+const server = http.createServer(handler);
+
+listenWithFallback(server, port, 10)
+  .then((boundPort) => {
+    console.log(`Local dev server running at http://localhost:${boundPort}`);
+  })
+  .catch((error) => {
+    console.error('Failed to start dev server:', error.message);
+    process.exit(1);
+  });
