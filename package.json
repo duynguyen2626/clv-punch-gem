@@ -4,9 +4,13 @@
   "description": "Automated check-in system for Cyberlogitec Blueprint.",
   "main": "index.js",
   "scripts": {
+    "dev": "npx vercel dev --yes",
     "dev:local": "npx vercel dev",
+    "dev:api": "npx vercel dev --yes",
+    "start": "npx vercel dev --yes",
     "test": "npx playwright test",
-    "dev:api": "npx vercel dev --yes"
+    "build": "echo 'No build step needed - Static files only'",
+    "preview": "npx vercel dev"
   },
   "keywords": [
     "playwright",
