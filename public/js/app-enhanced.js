@@ -761,13 +761,10 @@ async function renderHistory(container) {
 
 async function renderSettings(container) {
     const data = await API.getState();
-    const { schedule = {}, times = {} } = data.config || {};
-    const telegram = (data.config && data.config.telegram) || { token: '', chatId: '' };
-    
-    // Set defaults for times if missing
-    const defaultTimes = { am: '08:30', noon: '13:30', pm: '20:00', offsetMin: 60 };
-    const finalTimes = { ...defaultTimes, ...times };
-    const finalSchedule = schedule || { 0: 'off', 1: 'wfh', 2: 'wfh', 3: 'wfh', 4: 'wfh', 5: 'wfh', 6: 'off' };
+    const cfg = (data && data.config) || {};
+    const telegram = (cfg.telegram && typeof cfg.telegram === 'object') ? cfg.telegram : { token: '', chatId: '' };
+    const finalTimes = { am: '08:30', noon: '13:30', pm: '20:00', offsetMin: 60, ...(cfg.times && typeof cfg.times === 'object' ? cfg.times : {}) };
+    const finalSchedule = (cfg.schedule && typeof cfg.schedule === 'object') ? cfg.schedule : { 0: 'off', 1: 'wfh', 2: 'wfh', 3: 'wfh', 4: 'wfh', 5: 'wfh', 6: 'off' };
 
     container.innerHTML = `
         <div class="max-w-3xl mx-auto space-y-8 animate-in pb-20">
@@ -868,7 +865,7 @@ async function renderSettings(container) {
         </div>`;
     lucide.createIcons();
 
-    const currentSchedule = { ...schedule };
+    const currentSchedule = { ...finalSchedule };
     $$('.sched-opt').forEach(b => b.onclick = () => {
         const d = b.dataset.day, v = b.dataset.val; currentSchedule[d] = v;
         $$(`.sched-opt[data-day="${d}"]`).forEach(btn => {
@@ -887,7 +884,7 @@ async function renderSettings(container) {
     
     // Config Export/Import
     $('#export-config').onclick = () => {
-        const config = { schedule: currentSchedule, telegram, times };
+        const config = { schedule: currentSchedule, telegram, times: finalTimes };
         const json = JSON.stringify(config, null, 2);
         Utils.downloadFile(json, `punch-config-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
         toast('Config Exported', 'success');

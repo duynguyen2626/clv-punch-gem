@@ -135,6 +135,7 @@ async function handleStatic(req, res, urlObj) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   res.setHeader('Content-Type', contentType);
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   const stream = fs.createReadStream(filePath);
   stream.on('error', () => res.status(500).send('Server error'));
   stream.pipe(res);
