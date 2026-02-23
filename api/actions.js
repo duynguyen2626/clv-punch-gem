@@ -2,6 +2,7 @@
 // Routes by 'action' query parameter or body field
 
 const { setPeriodState, setIsOff, setIsOffRange, setDayModeOverride } = require('../lib/kv');
+const { saveSwapOverride } = require('../lib/db');
 const { sendChat } = require('../lib/chat');
 const { getVietnamDateKey, getCurrentPeriod } = require('../lib/time');
 const { kv } = require('@vercel/kv');
@@ -136,8 +137,13 @@ const handlers = {
     const dateKey = date;
     const todayKey = getVietnamDateKey();
 
-    // Lưu override
+    // Lưu override — persistent DB + KV cache
     await setDayModeOverride(dateKey, toMode);
+    try {
+      await saveSwapOverride(dateKey, toMode);
+    } catch (dbErr) {
+      console.warn('[swapDay] DB persist skipped:', dbErr.message);
+    }
 
     if (toMode === 'wfh') {
       // WIO → WFH: nếu là ngày hôm nay thì kích hoạt GHA luôn
