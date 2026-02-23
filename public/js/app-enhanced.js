@@ -75,7 +75,7 @@ function renderStatusGuide(data) {
     const isEnabled = config.isEnabled;
     const schedule = config.schedule || {};
     const dayIdx = new Date(date + 'T00:00:00+07:00').getDay();
-    const dayType = schedule[dayIdx] || 'wio';
+    const dayType = schedule[String(dayIdx)] || schedule[dayIdx] || 'wio';
 
     container.innerHTML = `
         <div class="status-bar">
@@ -220,7 +220,7 @@ function showSwapDayModal(schedule = {}) {
         d.setDate(d.getDate() + i);
         const iso = d.toLocaleDateString('en-CA');          // YYYY-MM-DD
         const dayIdx = d.getDay();
-        const baseMode = schedule[dayIdx] || 'wio';
+        const baseMode = schedule[String(dayIdx)] || schedule[dayIdx] || 'wio';
         days.push({ iso, dayIdx, baseMode, label: d.toLocaleDateString('vi-VN', { weekday: 'short' }), num: d.getDate(), month: d.getMonth() + 1 });
     }
 
