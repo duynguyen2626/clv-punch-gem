@@ -62,6 +62,11 @@ export async function getState(date) {
     return apiFetch(`/api/state${q}`, { method: 'GET' });
 }
 
+/** GET /api/state?dates= — bulk effective modes for multiple dates */
+export async function getBulkState(dates) {
+    return apiGet(`/api/state?dates=${dates.join(',')}`);
+}
+
 /** GET /api/history — last N days */
 export async function getHistory(days = 30) {
     return apiGet(`/api/history?days=${days}`);

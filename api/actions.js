@@ -141,9 +141,14 @@ const handlers = {
 
     if (toMode === 'wfh') {
       // WIO → WFH: nếu là ngày hôm nay thì kích hoạt GHA luôn
+      let autoTriggered = false;
       if (dateKey === todayKey) {
-        await setWfhOverride(dateKey);
-        await triggerGitHubWorkflow();
+        try {
+          await triggerGitHubWorkflow();
+          autoTriggered = true;
+        } catch (ghaErr) {
+          console.warn('[swapDay] GHA trigger skipped:', ghaErr.message);
+        }
       }
       await sendChat({
         title: `🔄 Đổi ${dateKey}: WIO → WFH`,
@@ -152,7 +157,7 @@ const handlers = {
           : `Ngày ${dateKey} đã chuyển sang WFH. Hệ thống sẽ tự Punch ngày đó.`,
         icon: 'info',
       });
-      return ok({ date: dateKey, toMode, autoTriggered: dateKey === todayKey });
+      return ok({ date: dateKey, toMode, autoTriggered });
     } else {
       // WFH → WIO: chỉ nhắc nhở, không tự punch
       await sendChat({
