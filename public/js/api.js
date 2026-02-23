@@ -100,6 +100,21 @@ export async function markWfhToday() {
     return apiPost('/api/actions', { action: 'markWfhToday' });
 }
 
+/** POST /api/actions — swap a specific date between wfh and wio mode */
+export async function swapDay(date, toMode) {
+    return apiPost('/api/actions', { action: 'swapDay', date, toMode });
+}
+
+/** POST /api/actions — update weekly schedule */
+export async function updateSchedule(schedule) {
+    return apiPost('/api/updates', { type: 'updateSchedule', schedule });
+}
+
+/** POST /api/updates — update settings (telegram/times) */
+export async function updateSettings(settings) {
+    return apiPost('/api/updates', { type: 'updateSettings', ...settings });
+}
+
 /** GET /api/dev-secret — get secret from env (dev only) */
 export async function getDevSecret() {
     try {

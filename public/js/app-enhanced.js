@@ -207,6 +207,148 @@ function showMarkOffModal(dateHint = Utils.todayVN()) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// Swap Day Modal
+// ══════════════════════════════════════════════════════════════
+
+function showSwapDayModal(schedule = {}) {
+    const root = $('#modal-root');
+
+    // Build next 7 days (today + 6)
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        const iso = d.toLocaleDateString('en-CA');          // YYYY-MM-DD
+        const dayIdx = d.getDay();
+        const baseMode = schedule[dayIdx] || 'wio';
+        days.push({ iso, dayIdx, baseMode, label: d.toLocaleDateString('vi-VN', { weekday: 'short' }), num: d.getDate(), month: d.getMonth() + 1 });
+    }
+
+    const modeBadge = (mode) => {
+        if (mode === 'wfh') return `<span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">WFH</span>`;
+        if (mode === 'off') return `<span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500">OFF</span>`;
+        return `<span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground">VP</span>`;
+    };
+
+    root.innerHTML = `
+        <div class="modal-overlay animate-in">
+            <div class="modal-content scale-in-95 animate-in max-w-md">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">🔄</span>
+                        <div>
+                            <h2 class="text-xl font-black leading-none">Swap Work Mode</h2>
+                            <p class="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Đổi chế độ cho ngày cụ thể</p>
+                        </div>
+                    </div>
+                    <button class="modal-close p-1 hover:bg-muted rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <!-- Day Picker Grid -->
+                <div class="grid grid-cols-7 gap-1">
+                    ${days.map((d, i) => `
+                    <button class="swap-day-btn flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all hover:border-primary/40 ${i === 0 ? 'border-primary bg-primary/5' : 'border-transparent bg-muted/40'}" data-idx="${i}">
+                        <span class="text-[9px] font-black uppercase opacity-50">${d.label}</span>
+                        <span class="text-sm font-black">${d.num}</span>
+                        ${modeBadge(d.baseMode)}
+                    </button>`).join('')}
+                </div>
+
+                <!-- Info Panel (updates on selection) -->
+                <div id="swap-info-panel" class="space-y-3">
+                    <div class="flex items-center justify-between px-1">
+                        <span class="text-xs font-bold text-muted-foreground">Ngày đã chọn</span>
+                        <span id="swap-selected-label" class="text-xs font-black">${days[0].iso}</span>
+                    </div>
+                    <div id="swap-direction" class="flex items-center justify-center gap-4 p-4 bg-muted/30 rounded-2xl">
+                        <div class="text-center">
+                            <p class="text-[9px] uppercase font-black opacity-40 mb-1">Hiện tại</p>
+                            <span id="swap-from-badge">${modeBadge(days[0].baseMode)}</span>
+                        </div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 opacity-30 shrink-0"></i>
+                        <div class="text-center">
+                            <p class="text-[9px] uppercase font-black opacity-40 mb-1">Sau khi đổi</p>
+                            <span id="swap-to-badge">${modeBadge(days[0].baseMode === 'wfh' ? 'wio' : 'wfh')}</span>
+                        </div>
+                    </div>
+                    <div id="swap-msg-box" class="p-4 rounded-2xl flex gap-3 text-[11px] leading-snug font-medium"></div>
+                </div>
+
+                <button id="swap-confirm" class="btn btn-primary w-full h-11 font-black">Xác nhận đổi</button>
+            </div>
+        </div>`;
+    lucide.createIcons();
+
+    let selectedIdx = 0;
+
+    const updatePanel = () => {
+        const d = days[selectedIdx];
+        const toMode = d.baseMode === 'wfh' ? 'wio' : d.baseMode === 'wio' ? 'wfh' : null;
+
+        $('#swap-selected-label').textContent = d.iso;
+        $('#swap-from-badge').innerHTML = modeBadge(d.baseMode);
+        $('#swap-to-badge').innerHTML = modeBadge(toMode || d.baseMode);
+
+        const msgBox = $('#swap-msg-box');
+        if (d.baseMode === 'off') {
+            msgBox.className = 'p-4 rounded-2xl flex gap-3 text-[11px] leading-snug font-medium bg-orange-500/5 text-orange-600';
+            msgBox.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 shrink-0 mt-0.5"></i><p>Ngày này đang OFF, không thể swap. Hãy xoá OFF trước.</p>`;
+            $('#swap-confirm').disabled = true;
+        } else if (d.baseMode === 'wio') {
+            msgBox.className = 'p-4 rounded-2xl flex gap-3 text-[11px] leading-snug font-medium bg-primary/5 text-primary/80';
+            msgBox.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 shrink-0 mt-0.5"></i><p><strong>Chuyển về WFH:</strong> Hệ thống sẽ tự động Punch ngày này. Bạn không cần vào VP.</p>`;
+            $('#swap-confirm').disabled = false;
+        } else {
+            msgBox.className = 'p-4 rounded-2xl flex gap-3 text-[11px] leading-snug font-medium bg-orange-500/5 text-orange-600';
+            msgBox.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 mt-0.5"></i><p><strong>Chuyển về Văn phòng:</strong> Nhớ tự check in tại VP nhé! Hệ thống sẽ KHÔNG tự punch ngày này.</p>`;
+            $('#swap-confirm').disabled = false;
+        }
+        lucide.createIcons();
+    };
+
+    updatePanel();
+
+    $$('.swap-day-btn').forEach((btn, i) => {
+        btn.onclick = () => {
+            selectedIdx = i;
+            $$('.swap-day-btn').forEach((b, j) => {
+                b.classList.toggle('border-primary', j === i);
+                b.classList.toggle('bg-primary/5', j === i);
+                b.classList.toggle('border-transparent', j !== i);
+                b.classList.toggle('bg-muted/40', j !== i);
+            });
+            updatePanel();
+        };
+    });
+
+    const close = () => root.innerHTML = '';
+    $$('.modal-close').forEach(b => b.onclick = close);
+
+    $('#swap-confirm').onclick = async () => {
+        const d = days[selectedIdx];
+        if (d.baseMode === 'off') return;
+        const toMode = d.baseMode === 'wfh' ? 'wio' : 'wfh';
+        const btn = $('#swap-confirm');
+        btn.disabled = true;
+        btn.textContent = 'Đang xử lý...';
+        try {
+            const result = await API.swapDay(d.iso, toMode);
+            if (toMode === 'wfh') {
+                toast(result.autoTriggered ? '🔄 Đổi WFH & Punch đã kích hoạt!' : '🔄 Đã đổi sang WFH', 'success');
+            } else {
+                toast('🔄 Đổi VP - Nhớ check in thủ công nhé!', 'info');
+            }
+            close();
+            onHashChange();
+        } catch (e) {
+            toast(e.message, 'error');
+            btn.disabled = false;
+            btn.textContent = 'Xác nhận đổi';
+        }
+    };
+}
+
+// ══════════════════════════════════════════════════════════════
 // Dashboard Page - ENHANCED
 // ══════════════════════════════════════════════════════════════
 
@@ -293,10 +435,14 @@ async function renderDashboard(container) {
             <!-- Quick Actions -->
             <div class="space-y-3">
                 <h3 class="text-sm font-black uppercase tracking-widest text-muted-foreground/40 px-1">Actions</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     <button id="qa-wfh" class="btn btn-primary h-20 flex-col !gap-1.5 shadow-lg hover:-translate-y-1 transition-transform">
                         <i data-lucide="rocket" class="w-6 h-6"></i>
                         <span class="text-[9px] font-black uppercase tracking-wide">Punch Now</span>
+                    </button>
+                    <button id="qa-swap-day" class="btn btn-outline h-20 flex-col !gap-1.5 hover:-translate-y-1 transition-all hover:border-primary/50 group">
+                        <span class="text-2xl">🔄</span>
+                        <span class="text-[9px] font-black uppercase tracking-wide">Swap Day</span>
                     </button>
                     <button id="qa-range-off" class="btn btn-outline h-20 flex-col !gap-1.5 border-dashed hover:border-solid hover:-translate-y-1 transition-all group">
                         <span class="text-3xl">🌴</span>
@@ -396,6 +542,7 @@ async function renderDashboard(container) {
             catch (err) { toast(err.message, 'error'); e.target.checked = !e.target.checked; }
         };
         $('#qa-range-off').onclick = () => showMarkOffModal(date);
+        $('#qa-swap-day').onclick = () => showSwapDayModal(schedule);
         $('#qa-wfh').onclick = async () => { try { await API.markWfhToday(); toast('GHA Triggered', 'success'); } catch (e) { toast(e.message, 'error'); } };
         $('#qa-mark-am').onclick = async () => { await API.markDone('am', date); toast('AM Marked Done', 'success'); onHashChange(); };
         $('#qa-mark-pm').onclick = async () => { await API.markDone('pm', date); toast('PM Marked Done', 'success'); onHashChange(); };
@@ -942,6 +1089,7 @@ function onHashChange() {
     $$('.nav-tab').forEach(t => t.dataset.page === page ? t.classList.add('active') : t.classList.remove('active'));
     
     const c = $('#app');
+    c.innerHTML = `<div class="flex items-center justify-center p-20 opacity-40"><div class="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin"></div></div>`;
     routes[page](c).catch(e => { c.innerHTML = `<p class="p-20 text-center font-bold text-red-500">${e.message}</p>`; });
 }
 
