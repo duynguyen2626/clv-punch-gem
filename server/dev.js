@@ -184,30 +184,31 @@ async function handler(req, res) {
   console.log(`${statusColor}${status}\x1b[0m ${method} ${path} (${duration}ms)`);
 }
 
-function listenWithFallback(server, port, maxAttempts) {
+function listenWithFallback(server, preferredPort) {
   return new Promise((resolve, reject) => {
-    const attempt = (currentPort, attemptsLeft) => {
-      server.listen(currentPort, () => resolve(server.address().port));
-      server.once('error', (error) => {
-        if (error.code === 'EADDRINUSE' && attemptsLeft > 0) {
-          server.close(() => attempt(currentPort + 1, attemptsLeft - 1));
-          return;
-        }
-        reject(error);
-      });
-    };
-    attempt(port, maxAttempts);
+    server.listen(preferredPort, () => resolve(server.address().port));
+    server.once('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        // Preferred port taken — let OS assign a free one
+        server.removeAllListeners('error');
+        server.listen(0, () => resolve(server.address().port));
+        server.once('error', reject);
+        return;
+      }
+      reject(error);
+    });
   });
 }
 
-const port = Number(process.env.PORT || 0);
+const port = Number(process.env.PORT || 3001);
 const server = http.createServer(handler);
 
-listenWithFallback(server, port, 10)
+listenWithFallback(server, port)
   .then((boundPort) => {
+    const portNote = boundPort === port ? '' : ` (port ${port} was busy, using fallback)`;
     console.log('\n═══════════════════════════════════════════════════════════');
     console.log('  ✅ Local dev server started');
-    console.log(`  🌐 URL: http://localhost:${boundPort}`);
+    console.log(`  🌐 URL: http://localhost:${boundPort}${portNote}`);
     console.log(`  📁 Public: ${publicDir}`);
     console.log(`  🔌 API: /api/* routes active`);
     console.log('═══════════════════════════════════════════════════════════\n');
