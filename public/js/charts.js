@@ -58,16 +58,16 @@ export function renderMiniCalendar(records, currentDate, bulkState) {
 
         if (isToday) cellClass += ' today';
 
-        // Mode icon badge
+        // Mode icon badge with emojis on hover
         if (dayState) {
             const mode = dayState.effectiveMode || dayState.scheduleMode;
             const isSwapped = dayState.modeOverride && dayState.modeOverride !== dayState.scheduleMode;
             if (dayState.isOff || mode === 'off') {
-                modeBadge = `<span class="cell-mode off" title="OFF">OFF</span>`;
+                modeBadge = `<span class="cell-mode off" title="OFF"><span class="cell-badge">🌴</span></span>`;
             } else if (mode === 'wfh') {
-                modeBadge = `<span class="cell-mode wfh${isSwapped ? ' swapped' : ''}" title="${isSwapped ? 'Swapped to WFH' : 'WFH'}">H</span>`;
+                modeBadge = `<span class="cell-mode wfh${isSwapped ? ' swapped' : ''}" title="${isSwapped ? 'Swapped to WFH' : 'WFH'}"><span class="cell-badge">🏠</span></span>`;
             } else {
-                modeBadge = `<span class="cell-mode wio${isSwapped ? ' swapped' : ''}" title="${isSwapped ? 'Swapped to Office' : 'Office'}">O</span>`;
+                modeBadge = `<span class="cell-mode wio${isSwapped ? ' swapped' : ''}" title="${isSwapped ? 'Swapped to Office' : 'Office'}"><span class="cell-badge">🏢</span></span>`;
             }
         }
 

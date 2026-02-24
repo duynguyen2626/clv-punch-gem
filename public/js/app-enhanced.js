@@ -1215,7 +1215,7 @@ async function renderHistory(container) {
     const loadChangesHistory = async () => {
         const changesList = $('#changes-list');
         try {
-            const events = await API.getEvents('swap_day', 100);
+            const events = await API.getEvents(['swap_day'], 100);
             if (!events || !events.events || events.events.length === 0) {
                 changesList.innerHTML = '<div class="card !border-dashed text-center opacity-40 font-bold py-20">No schedule changes recorded</div>';
                 return;

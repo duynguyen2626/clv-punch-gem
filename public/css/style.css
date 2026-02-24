@@ -672,9 +672,16 @@ nav {
   border-radius: 2px;
   letter-spacing: 0.02em;
 }
-.cell-mode.wfh { background: hsl(var(--primary)/0.15); color: hsl(var(--primary)); }
-.cell-mode.wio { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
-.cell-mode.off { background: hsl(25 95% 53%/0.15); color: hsl(25 95% 53%); font-size: 5px; }
+.cell-badge {
+  display: none;
+  font-size: 12px;
+}
+.calendar-cell:hover .cell-badge {
+  display: inline;
+}
+.cell-mode.wfh { background: transparent; color: transparent; }
+.cell-mode.wio { background: transparent; color: transparent; }
+.cell-mode.off { background: transparent; color: transparent; font-size: 0; }
 .cell-mode.swapped { outline: 1px dashed currentColor; outline-offset: -1px; }
 
 /* Calendar day detail popup */
