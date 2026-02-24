@@ -30,6 +30,7 @@ module.exports = async function handler(req, res) {
     });
   } catch (e) {
     const msg = (e && e.message) || 'unknown error';
+    console.error('[events] Error:', msg, e.stack || '');
     if (msg.includes('secret')) return bad(403, msg);
     if (msg.includes('method not allowed')) return bad(405, msg);
     if (msg.includes('invalid')) return bad(400, msg);
