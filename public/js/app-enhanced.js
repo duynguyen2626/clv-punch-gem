@@ -42,9 +42,13 @@ function toast(msg, type = 'info') {
 // Helper Functions
 // ══════════════════════════════════════════════════════════════
 
-function statusBadge(status) {
+function statusBadge(status, source) {
     let cls = "badge-pending", icon = "clock", text = "Pending";
-    if (status === 'success') { cls = "badge-success"; icon = "check-circle"; text = "Success"; }
+    if (status === 'success') { 
+        cls = "badge-success"; 
+        icon = "check-circle"; 
+        text = source === 'gha' || source === 'cron-reset' ? "Auto" : "Success"; 
+    }
     else if (status === 'fail') { cls = "badge-fail"; icon = "x-circle"; text = "Failed"; }
     else if (status === 'manual_done') { cls = "badge-success !bg-blue-500/10 !text-blue-600 !border-blue-500/20"; icon = "check"; text = "Manual"; }
     return `<span class="badge ${cls}"><i data-lucide="${icon}" class="w-3 h-3"></i>${text}</span>`;
@@ -661,7 +665,7 @@ async function renderDashboard(container) {
                             <p class="text-[10px] text-muted-foreground/60 font-bold mt-0.5">${times.am} – ${times.noon}</p>
                         </div>
                         <div class="flex flex-col items-end gap-1.5">
-                            ${statusBadge(periods.am.status)}
+                            ${statusBadge(periods.am.status, periods.am.source)}
                             <span class="text-xs font-mono font-bold opacity-30">${periods.am.recordedPunchTime || '--:--'}</span>
                             ${periods.am.imageUrl ? `<button class="text-[9px] font-black text-primary hover:underline" onclick="openLightbox('${periods.am.imageUrl}')">Review</button>` : ''}
                         </div>
@@ -674,7 +678,7 @@ async function renderDashboard(container) {
                             <p class="text-[10px] text-muted-foreground/60 font-bold mt-0.5">${times.noon} – 17:30</p>
                         </div>
                         <div class="flex flex-col items-end gap-1.5">
-                            ${statusBadge(periods.pm.status)}
+                            ${statusBadge(periods.pm.status, periods.pm.source)}
                             <span class="text-xs font-mono font-bold opacity-30">${periods.pm.recordedPunchTime || '--:--'}</span>
                             ${periods.pm.imageUrl ? `<button class="text-[9px] font-black text-primary hover:underline" onclick="openLightbox('${periods.pm.imageUrl}')">Review</button>` : ''}
                         </div>
@@ -1158,12 +1162,12 @@ async function renderHistory(container) {
                 <div class="flex items-center gap-6 flex-1">
                     <div class="flex-1 space-y-1">
                         <div class="flex items-center gap-2">
-                            ${statusBadge(am.status)}
+                            ${statusBadge(am.status, am.source)}
                             <span class="text-[10px] font-mono ${isLateAM ? 'text-red-500 font-bold' : 'opacity-20'}">${am.recordedPunchTime || '--:--'}</span>
                             ${isLateAM ? '<i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>' : ''}
                         </div>
                         <div class="flex items-center gap-2">
-                            ${statusBadge(pm.status)}
+                            ${statusBadge(pm.status, pm.source)}
                             <span class="text-[10px] font-mono ${isLatePM ? 'text-red-500 font-bold' : 'opacity-20'}">${pm.recordedPunchTime || '--:--'}</span>
                             ${isLatePM ? '<i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>' : ''}
                         </div>

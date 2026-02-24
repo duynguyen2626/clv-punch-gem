@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
                             status: latest.status,
                             recordedPunchTime: latest.punch_time,
                             lastUpdate: new Date(latest.created_at * 1000).toISOString(),
-                            source: 'db',
+                            source: latest.source || 'auto',
                         };
                     }
                     if (dbRec.pm.length > 0) {
@@ -74,7 +74,7 @@ module.exports = async function handler(req, res) {
                             status: latest.status,
                             recordedPunchTime: latest.punch_time,
                             lastUpdate: new Date(latest.created_at * 1000).toISOString(),
-                            source: 'db',
+                            source: latest.source || 'auto',
                         };
                     }
                 }
