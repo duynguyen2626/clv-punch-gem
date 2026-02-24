@@ -145,6 +145,11 @@ export async function testTelegram() {
     return apiPost('/api/actions', { action: 'testTelegram' });
 }
 
+/** POST /api/actions — clear a swap override for a specific date */
+export async function clearSwapOverride(date) {
+    return apiPost('/api/actions', { action: 'clearSwapOverride', date });
+}
+
 /** POST /api/actions — register Telegram webhook URL */
 export async function registerTelegramWebhook(webhookUrl) {
     return apiPost('/api/actions', { action: 'registerTelegramWebhook', webhookUrl });

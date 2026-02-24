@@ -499,13 +499,28 @@ async function renderDashboard(container) {
             API.getState(),
             API.getHistory(30)
         ]);
-        
+
         renderStatusGuide(data);
         globalState.historyRecords = historyData.records || [];
-        
+
         const { config, day, periods, date } = data;
         const { records } = historyData;
         const schedule = config.schedule || {}, times = config.times || { am: '08:30', noon: '13:30', pm: '20:00' };
+
+        // Fetch bulk state for calendar month (async, non-blocking)
+        let calendarBulkState = {};
+        const fetchMonthBulkState = async (monthDate) => {
+            const d = new Date(monthDate);
+            const y = d.getFullYear(), m = d.getMonth();
+            const days = new Date(y, m + 1, 0).getDate();
+            const dates = [];
+            for (let i = 1; i <= days; i++) dates.push(`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`);
+            try {
+                const res = await API.getBulkState(dates);
+                return res;
+            } catch { return {}; }
+        };
+        calendarBulkState = await fetchMonthBulkState(date);
 
         // Calculate statistics
         const successRate = Utils.calculateSuccessRate(records);
@@ -635,7 +650,7 @@ async function renderDashboard(container) {
                 <!-- Mini calendar + recent activity below -->
                 <div class="border-t border-border grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
                     <div id="mini-calendar-container" class="p-1">
-                        ${Charts.renderMiniCalendar(records, date)}
+                        ${Charts.renderMiniCalendar(records, date, calendarBulkState)}
                     </div>
                     <div class="p-5">
                         <p class="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3">Recent Activity</p>
@@ -671,39 +686,104 @@ async function renderDashboard(container) {
         $('#qa-mark-pm').onclick = async () => { await API.markDone('pm', date); toast('PM Marked Done', 'success'); onHashChange(); };
 
         // Calendar navigation
-        $$('.calendar-nav').forEach(btn => {
-            btn.onclick = () => {
-                const nav = btn.dataset.nav;
-                if (nav === 'prev') {
-                    globalState.calendarMonth.setMonth(globalState.calendarMonth.getMonth() - 1);
-                } else {
-                    globalState.calendarMonth.setMonth(globalState.calendarMonth.getMonth() + 1);
-                }
-                $('#mini-calendar-container').innerHTML = Charts.renderMiniCalendar(records, globalState.calendarMonth.toISOString().split('T')[0]);
-                lucide.createIcons();
-                attachCalendarNavListeners(records);
-            };
-        });
+        const attachNavListeners = () => {
+            $$('.calendar-nav').forEach(btn => {
+                btn.onclick = () => {
+                    const nav = btn.dataset.nav;
+                    if (nav === 'prev') {
+                        globalState.calendarMonth.setMonth(globalState.calendarMonth.getMonth() - 1);
+                    } else {
+                        globalState.calendarMonth.setMonth(globalState.calendarMonth.getMonth() + 1);
+                    }
+                    rerenderCalendar();
+                };
+            });
+        };
+        const rerenderCalendar = async () => {
+            const monthStr = globalState.calendarMonth.toISOString().split('T')[0];
+            const bs = await fetchMonthBulkState(monthStr);
+            calendarBulkState = bs;
+            $('#mini-calendar-container').innerHTML = Charts.renderMiniCalendar(records, monthStr, bs);
+            lucide.createIcons();
+            attachNavListeners();
+            attachCalendarCellListeners(records, calendarBulkState);
+        };
+        attachNavListeners();
+
+        // Calendar cell click: show detail popup
+        const dayLabelsPopup = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        function attachCalendarCellListeners(recs, bulkSt) {
+            const recMap = {};
+            recs.forEach(r => { recMap[r.date] = r; });
+            const byDate = (bulkSt && bulkSt.byDate) || {};
+
+            $$('.calendar-cell[data-date]').forEach(cell => {
+                cell.onclick = (e) => {
+                    e.stopPropagation();
+                    // Remove existing popup
+                    const existing = document.querySelector('.calendar-popup');
+                    if (existing) existing.remove();
+
+                    const dt = cell.dataset.date;
+                    const rec = recMap[dt];
+                    const st = byDate[dt];
+                    const d = new Date(dt + 'T00:00:00+07:00');
+                    const dayLabel = dayLabelsPopup[d.getDay()];
+                    const dd = dt.split('-');
+
+                    // Mode info
+                    let modeHtml = '';
+                    if (st) {
+                        const mode = st.effectiveMode || st.scheduleMode || '—';
+                        const isSwapped = st.modeOverride && st.modeOverride !== st.scheduleMode;
+                        const modeText = mode === 'wfh' ? 'WFH' : mode === 'off' ? 'OFF' : 'Office';
+                        const modeColor = mode === 'wfh' ? 'text-primary' : mode === 'off' ? 'text-orange-500' : 'text-muted-foreground';
+                        modeHtml = `<div class="popup-row"><span>Mode</span><span class="font-black ${modeColor}">${modeText}${isSwapped ? ' <span class="text-amber-500">(swapped)</span>' : ''}</span></div>`;
+                    }
+
+                    // Period info
+                    const periodHtml = (label, p) => {
+                        if (!p) return `<div class="popup-row"><span>${label}</span><span class="text-muted-foreground">—</span></div>`;
+                        const s = p.status;
+                        const time = p.recordedPunchTime || '';
+                        const icon = s === 'success' || s === 'manual_done' ? '<span class="text-green-500 font-black">OK</span>' : s === 'fail' ? '<span class="text-red-500 font-black">FAIL</span>' : '<span class="text-muted-foreground">Pending</span>';
+                        return `<div class="popup-row"><span>${label}</span><span>${icon}${time ? ' <span class="text-muted-foreground">' + time + '</span>' : ''}</span></div>`;
+                    };
+                    const amP = rec?.periods?.am;
+                    const pmP = rec?.periods?.pm;
+
+                    // OFF info
+                    const isOff = rec?.isOff || (rec?.day && rec.day.isOff) || (st && st.isOff);
+
+                    const popup = document.createElement('div');
+                    popup.className = 'calendar-popup';
+                    popup.innerHTML = `
+                        <div class="popup-header">
+                            <span>${dayLabel} ${dd[2]}/${dd[1]}/${dd[0]}</span>
+                            ${isOff ? '<span class="text-[9px] font-black px-2 py-0.5 rounded bg-orange-500/10 text-orange-500">OFF</span>' : ''}
+                        </div>
+                        ${modeHtml}
+                        ${!isOff ? periodHtml('AM Punch', amP) : ''}
+                        ${!isOff ? periodHtml('PM Punch', pmP) : ''}
+                    `;
+
+                    // Position popup near the clicked cell
+                    const rect = cell.getBoundingClientRect();
+                    popup.style.top = `${rect.bottom + 6}px`;
+                    popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 250))}px`;
+                    document.body.appendChild(popup);
+
+                    // Dismiss on click outside
+                    const dismiss = (ev) => { if (!popup.contains(ev.target) && ev.target !== cell) { popup.remove(); document.removeEventListener('click', dismiss); } };
+                    setTimeout(() => document.addEventListener('click', dismiss), 10);
+                };
+            });
+        }
+        attachCalendarCellListeners(records, calendarBulkState);
 
     } catch (e) { 
         container.innerHTML = `<p class="p-20 text-center font-bold text-red-500">${e.message}</p>`; 
     }
-}
-
-function attachCalendarNavListeners(records) {
-    $$('.calendar-nav').forEach(btn => {
-        btn.onclick = () => {
-            const nav = btn.dataset.nav;
-            if (nav === 'prev') {
-                globalState.calendarMonth.setMonth(globalState.calendarMonth.getMonth() - 1);
-            } else {
-                globalState.calendarMonth.setMonth(globalState.calendarMonth.getMonth() + 1);
-            }
-            $('#mini-calendar-container').innerHTML = Charts.renderMiniCalendar(records, globalState.calendarMonth.toISOString().split('T')[0]);
-            lucide.createIcons();
-            attachCalendarNavListeners(records);
-        };
-    });
 }
 
 function startCountdownTimer(amTime, pmTime) {
@@ -1169,6 +1249,19 @@ async function renderSettings(container) {
                 </div>
             </div>
 
+            <!-- Active Swap Overrides -->
+            <div class="settings-section">
+                <div class="settings-header">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center"><i data-lucide="repeat-2" class="w-5 h-5"></i></div>
+                        <div><p class="font-black">Active Swap Overrides</p><p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Per-date overrides (not affecting default schedule)</p></div>
+                    </div>
+                </div>
+                <div id="swap-overrides-list" class="settings-content">
+                    <p class="text-xs text-muted-foreground text-center py-4">Loading...</p>
+                </div>
+            </div>
+
             <!-- Config Import/Export -->
             <div class="settings-section">
                 <div class="settings-header">
@@ -1246,6 +1339,76 @@ async function renderSettings(container) {
             btn.textContent = 'Commit Cycle';
         }
     };
+
+    // ── Load Active Swap Overrides ──────────────────────────
+    const dayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const loadSwapOverrides = async () => {
+        const container = $('#swap-overrides-list');
+        try {
+            // Fetch next 30 days
+            const dates = [];
+            const now = new Date();
+            for (let i = -7; i < 30; i++) {
+                const d = new Date(now); d.setDate(d.getDate() + i);
+                dates.push(d.toISOString().split('T')[0]);
+            }
+            const res = await API.getBulkState(dates);
+            const overrides = [];
+            if (res.byDate) {
+                for (const [dt, info] of Object.entries(res.byDate)) {
+                    if (info.modeOverride) {
+                        overrides.push({ date: dt, from: info.scheduleMode, to: info.modeOverride });
+                    }
+                }
+            }
+            overrides.sort((a, b) => a.date.localeCompare(b.date));
+
+            if (overrides.length === 0) {
+                container.innerHTML = '<p class="text-xs text-muted-foreground text-center py-4">No active swaps</p>';
+                return;
+            }
+
+            const modeBadge = (m) => m === 'wfh'
+                ? '<span class="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded bg-primary/10 text-primary">WFH</span>'
+                : m === 'off'
+                ? '<span class="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded bg-orange-500/10 text-orange-500">OFF</span>'
+                : '<span class="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded bg-muted text-muted-foreground">OFFICE</span>';
+
+            container.innerHTML = `<div class="space-y-2">${overrides.map(o => {
+                const d = new Date(o.date + 'T00:00:00+07:00');
+                const dayLabel = dayLabels[d.getDay()];
+                const dd = o.date.split('-');
+                const dateStr = `${dayLabel} ${dd[2]}/${dd[1]}`;
+                return `<div class="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border/50">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold w-16">${dateStr}</span>
+                        <div class="flex items-center gap-1.5">
+                            ${modeBadge(o.from)}
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-muted-foreground"></i>
+                            ${modeBadge(o.to)}
+                        </div>
+                    </div>
+                    <button class="swap-clear-btn text-[9px] font-black px-2 py-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors" data-date="${o.date}">Clear</button>
+                </div>`;
+            }).join('')}</div>`;
+            lucide.createIcons();
+
+            $$('.swap-clear-btn').forEach(btn => {
+                btn.onclick = async () => {
+                    btn.disabled = true; btn.textContent = '...';
+                    try {
+                        await API.clearSwapOverride(btn.dataset.date);
+                        toast(`Swap cleared: ${btn.dataset.date}`, 'success');
+                        loadSwapOverrides();
+                    } catch (e) { toast('Clear failed: ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Clear'; }
+                };
+            });
+        } catch (e) {
+            container.innerHTML = `<p class="text-xs text-red-500 text-center py-4">${e.message}</p>`;
+        }
+    };
+    loadSwapOverrides();
+
     $('#save-telegram').onclick = async () => {
         const btn = $('#save-telegram');
         btn.disabled = true; btn.textContent = 'Syncing...';
