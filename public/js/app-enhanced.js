@@ -1353,36 +1353,30 @@ function onHashChange() {
     routes[page](c).catch(e => { c.innerHTML = `<p class="p-20 text-center font-bold text-red-500">${e.message}</p>`; });
 }
 
-// ── Auth forms (register / login) ────────────────────────────
-function showAuthForm(mode) {
-    const isRegister = mode === 'register';
+// ── Secret input form (first visit on prod) ──────────────────
+function showSecretForm() {
     const root = $('#modal-root');
     root.innerHTML = `<div class="modal-overlay animate-in"><div class="modal-content !max-w-sm space-y-5">
         <div class="text-center">
-            <h2 class="text-xl font-black">${isRegister ? 'Create Account' : 'Sign In'}</h2>
+            <h2 class="text-xl font-black">Punch Secret</h2>
             <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                ${isRegister ? 'First-time setup — create your account' : 'Enter your credentials'}
+                Enter your PUNCH_SECRET to continue
             </p>
         </div>
-        <div class="space-y-3">
-            <input type="text"     id="auth-user" class="input w-full" placeholder="Username" autocomplete="username" spellcheck="false">
-            <div class="relative">
-                <input type="password" id="auth-pass" class="input w-full pr-10" placeholder="Password" autocomplete="${isRegister ? 'new-password' : 'current-password'}">
-                <button id="auth-eye" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    <svg id="auth-eye-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-            </div>
+        <div class="relative">
+            <input type="password" id="auth-secret" class="input w-full pr-10" placeholder="PUNCH_SECRET" autocomplete="off" spellcheck="false">
+            <button id="auth-eye" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <svg id="auth-eye-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
         </div>
         <div id="auth-error" class="hidden text-[11px] text-destructive font-medium text-center"></div>
-        <button id="auth-submit" class="btn btn-primary w-full shadow-lg shadow-primary/20">
-            ${isRegister ? 'Create Account' : 'Sign In'}
-        </button>
-        ${!isRegister ? '' : '<p class="text-[10px] text-center text-muted-foreground">You can register multiple accounts later in Settings</p>'}
+        <button id="auth-submit" class="btn btn-primary w-full shadow-lg shadow-primary/20">Unlock</button>
+        <p class="text-[10px] text-center text-muted-foreground">Set PUNCH_SECRET in Vercel Environment Variables</p>
     </div></div>`;
 
     // Eye toggle
     $('#auth-eye').onclick = () => {
-        const inp = $('#auth-pass');
+        const inp = $('#auth-secret');
         inp.type = inp.type === 'password' ? 'text' : 'password';
         $('#auth-eye-icon').innerHTML = inp.type === 'text'
             ? '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>'
@@ -1391,39 +1385,29 @@ function showAuthForm(mode) {
 
     const errEl = $('#auth-error');
     const submit = async () => {
-        const u = $('#auth-user').value.trim();
-        const p = $('#auth-pass').value;
-        if (!u || !p) { errEl.classList.remove('hidden'); errEl.textContent = 'Please fill both fields.'; return; }
+        const s = $('#auth-secret').value.trim();
+        if (!s) { errEl.classList.remove('hidden'); errEl.textContent = 'Please enter your secret.'; return; }
 
         errEl.classList.add('hidden');
         $('#auth-submit').disabled = true;
-        $('#auth-submit').textContent = isRegister ? 'Creating…' : 'Signing in…';
+        $('#auth-submit').textContent = 'Verifying…';
         try {
-            let res;
-            if (isRegister) {
-                res = await API.authRegister(u, p);
-                if (!res.ok) throw new Error(res.error);
-                // Register now returns token directly — no separate login needed
-            } else {
-                res = await API.authLogin(u, p);
-            }
-            if (!res.ok) throw new Error(res.error);
-            if (!res.token) throw new Error('No session token returned');
-            API.setSession(res.token);
+            API.setSecret(s);
+            // Test the secret by calling an API endpoint
+            await API.getState();
             location.reload();
         } catch (e) {
+            API.clearSecret();
             errEl.classList.remove('hidden');
-            errEl.textContent = e.message;
+            errEl.textContent = e.message === 'AUTH_FAIL' ? 'Invalid secret' : e.message;
             $('#auth-submit').disabled = false;
-            $('#auth-submit').textContent = isRegister ? 'Create Account' : 'Sign In';
+            $('#auth-submit').textContent = 'Unlock';
         }
     };
 
     $('#auth-submit').onclick = submit;
-    ['auth-user', 'auth-pass'].forEach(id => {
-        $('#' + id).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
-    });
-    setTimeout(() => $('#auth-user') && $('#auth-user').focus(), 100);
+    $('#auth-secret').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+    setTimeout(() => $('#auth-secret') && $('#auth-secret').focus(), 100);
 }
 
 async function boot() {
@@ -1453,23 +1437,33 @@ async function boot() {
     }; });
 
     // ── Auth gate ─────────────────────────────────────────────
-    const authStatus = await API.authCheck();
-
-    // Already authenticated via session token
-    if (authStatus.authenticated) {
-        // good — fall through to dashboard
-    }
-    // First-time setup: no user registered yet
-    else if (authStatus.needsSetup) {
-        showAuthForm('register');
-        return;
-    }
-    // Has valid session check but not authenticated, or check failed → show login
-    else {
-        API.clearSecret();
-        API.clearSession();
-        showAuthForm('login');
-        return;
+    // Local dev: auto-get secret from .env via /api/dev-secret
+    if (!API.hasSecret()) {
+        const devResult = await API.getDevSecret();
+        if (devResult && devResult.noAuth) {
+            // No PUNCH_SECRET configured → open access
+        } else if (devResult && typeof devResult === 'string') {
+            // Local dev: got secret from .env
+            API.setSecret(devResult);
+        } else {
+            // Prod: check if PUNCH_SECRET is required
+            const check = await API.authCheck();
+            if (check.needsSecret) {
+                showSecretForm();
+                return;
+            }
+        }
+    } else {
+        // Has saved secret — verify it still works
+        try {
+            await API.getState();
+        } catch (e) {
+            if (e.message === 'AUTH_FAIL') {
+                API.clearSecret();
+                showSecretForm();
+                return;
+            }
+        }
     }
 
     window.onhashchange = onHashChange;
