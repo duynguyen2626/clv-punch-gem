@@ -2,6 +2,7 @@
 
 const { setPeriodState, getIsOff, getIsEnabled } = require('../../lib/kv');
 const { sendChat } = require('../../lib/chat');
+const { sendTelegram, sendPhoto } = require('../../lib/telegram');
 const { getVietnamDateKey, getCurrentPeriod, getVietnamTimestamp } = require('../../lib/time');
 const { authenticateCron } = require('../../lib/auth');
 
@@ -14,7 +15,7 @@ module.exports = async function handler(req, res) {
     res.setHeader('Allow', 'POST');
     return bad(405, 'method not allowed');
   }
-  
+
   try {
     // 1. Xác thực
     await authenticateCron(req);
@@ -29,9 +30,9 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const { 
+    const {
       status, // 'success' | 'fail'
-      message = '', 
+      message = '',
       imageUrl = '',
       recordedPunchTime = '',
     } = body;
@@ -40,24 +41,24 @@ module.exports = async function handler(req, res) {
       return bad(400, 'invalid status. Must be "success" or "fail"');
     }
 
-    const dateKey = (body && body.date) 
-      ? String(body.date) 
+    const dateKey = (body && body.date)
+      ? String(body.date)
       : getVietnamDateKey();
-      
-    const period = (body && body.period) 
-      ? String(body.period) 
+
+    const period = (body && body.period)
+      ? String(body.period)
       : getCurrentPeriod();
 
     if (period !== 'am' && period !== 'pm') {
       return bad(400, 'invalid period. Must be "am" or "pm"');
     }
-    
+
     // 3. Kiểm tra điều kiện
     const [isEnabled, isOff] = await Promise.all([
       getIsEnabled(),
       getIsOff(dateKey)
     ]);
-    
+
     if (!isEnabled) {
       return ok({ message: 'Skipped: System is disabled.' });
     }
@@ -71,11 +72,11 @@ module.exports = async function handler(req, res) {
 
     // 5. Gửi thông báo Chat
     const periodText = period === 'am' ? 'Punch In (Sáng)' : 'Punch Out (Chiều)';
-    
+
     if (status === 'success') {
       const recordedTime = recordedPunchTime ? new Date(recordedPunchTime) : null;
       const isValidDate = recordedTime && !isNaN(recordedTime);
-      
+
       const subtitle = isValidDate
         ? `Ghi nhận lúc ${getVietnamDateKey(recordedTime)} (auto-time)`
         : getVietnamTimestamp();
@@ -97,10 +98,21 @@ module.exports = async function handler(req, res) {
         title: `${successEmoji} ${periodText} Thành Công (Auto)`, // <-- Thêm emoji vào title
         // --- KẾT THÚC SỬA ---
         subtitle: subtitle,
-        imageUrl: imageUrl || undefined, 
+        imageUrl: imageUrl || undefined,
         icon: successIcon, // <-- Icon (to, đen)
         linkButton: linkButton,
       });
+
+      // --- Notify Telegram of success ---
+      const teleMsg = `${successEmoji} <b>${periodText} Thành Công (Auto)</b>\n━━━━━━━━━━━━━━━━\n📅 Ngày: ${dateKey}\n✅ Giờ: ${subtitle}\n\n<i>Mọi thứ đã sẵn sàng!</i>`;
+      if (imageUrl) {
+        await sendPhoto({
+          photo: imageUrl,
+          caption: teleMsg
+        }).catch(e => console.warn('[report] tele success photo skip:', e.message));
+      } else {
+        await sendTelegram({ text: teleMsg }).catch(e => console.warn('[report] tele success skip:', e.message));
+      }
       // --- KẾT THÚC SỬA ---
 
     } else {
@@ -112,7 +124,7 @@ module.exports = async function handler(req, res) {
           url: imageUrl,
         };
       }
-      
+
       await sendChat({
         title: `🚨 ${periodText} Thất Bại (Auto)`,
         message: `<b>Error:</b> ${message || 'No details from GHA.'}`,
@@ -120,6 +132,17 @@ module.exports = async function handler(req, res) {
         icon: 'failure',
         linkButton: linkButton, // <-- Gửi nút bấm
       });
+
+      // --- Notify Telegram of failure ---
+      const teleMsg = `🚨 <b>${periodText} Thất Bại (Auto)</b>\n━━━━━━━━━━━━━━━━\n📅 Ngày: ${dateKey}\n❌ Lỗi: ${message || 'Không có chi tiết'}`;
+      if (imageUrl) {
+        await sendPhoto({
+          photo: imageUrl,
+          caption: teleMsg
+        }).catch(e => console.warn('[report] tele fail photo skip:', e.message));
+      } else {
+        await sendTelegram({ text: teleMsg }).catch(e => console.warn('[report] tele fail skip:', e.message));
+      }
     }
 
     // 6. Trả về kết quả
