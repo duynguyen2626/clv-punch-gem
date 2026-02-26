@@ -890,17 +890,17 @@ async function renderDashboard(container) {
         $('#qa-range-off').onclick = () => showMarkOffModal(date);
         $('#qa-swap-day').onclick = () => showSwapDayModal(schedule);
         $('#qa-wfh').onclick = async () => { try { await API.markWfhToday(); toast('Manual Punch Sent!', 'success'); } catch (e) { toast(e.message, 'error'); } };
-        $('#qa-mark-am').onclick = async () => { 
+        $('#qa-mark-am').onclick = async () => {
             const isDone = $('#qa-mark-am').dataset.state === 'done';
-            await API.markDone('am', date, isDone); 
+            await API.markDone('am', date, isDone);
             toast(isDone ? 'Undo AM Done' : 'AM Marked Done', 'success');
-            onHashChange(); 
+            onHashChange();
         };
-        $('#qa-mark-pm').onclick = async () => { 
+        $('#qa-mark-pm').onclick = async () => {
             const isDone = $('#qa-mark-pm').dataset.state === 'done';
-            await API.markDone('pm', date, isDone); 
+            await API.markDone('pm', date, isDone);
             toast(isDone ? 'Undo PM Done' : 'PM Marked Done', 'success');
-            onHashChange(); 
+            onHashChange();
         };
 
     } catch (e) {
@@ -1891,6 +1891,14 @@ async function boot() {
         const el = $('#nav-clock');
         if (el) el.textContent = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false }) + ' VN';
     }, 1000);
+
+    // Auto-refresh data every 30s to show GHA results or external changes
+    setInterval(() => {
+        if (!document.hidden && (globalState.currentPage === 'dashboard' || globalState.currentPage === 'history')) {
+            console.log('[auto-refresh] Updating data...');
+            onHashChange(); // This triggers data fetch and re-render
+        }
+    }, 30000);
 
     // Register keyboard shortcuts
     Utils.registerShortcut('d', () => window.location.hash = 'dashboard', true);

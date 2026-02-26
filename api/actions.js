@@ -67,11 +67,17 @@ const handlers = {
     await logSystemEvent('mark_done', { date: dateKey, period }, 'manual').catch(e => console.warn(e.message));
 
     const periodText = period === 'am' ? 'Punch In (Sáng)' : 'Punch Out (Chiều)';
-    await sendChat({
-      title: `👌 Đã xác nhận: ${periodText} (Thủ công)`,
-      message: `Đã đánh dấu ${periodText} ngày ${dateKey} là ĐÃ XONG.`,
-      icon: 'manual',
-    });
+    const emoji = period === 'am' ? '☀️' : '🌙';
+    const teleMsg = `${emoji} <b>Xác nhận: ${periodText} (Thủ công)</b>\n━━━━━━━━━━━━━━━━\n📅 Ngày: ${dateKey}\n✅ Trạng thái: <b>ĐÃ XONG</b>`;
+
+    await Promise.all([
+      sendChat({
+        title: `👌 Đã xác nhận: ${periodText} (Thủ công)`,
+        message: `Đã đánh dấu ${periodText} ngày ${dateKey} là ĐÃ XONG.`,
+        icon: 'manual',
+      }),
+      sendTelegram({ text: teleMsg }).catch(e => console.warn('[markDone] telegram skip:', e.message))
+    ]);
 
     return ok({ date: dateKey, period, status: 'manual_done' });
   },
