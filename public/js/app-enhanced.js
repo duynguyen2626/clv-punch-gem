@@ -1331,8 +1331,11 @@ async function renderSettings(container) {
                         <div><p class="font-black">Telegram Bot</p><p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Notifications & Control</p></div>
                     </div>
                     <div class="flex gap-2">
-                        <button id="test-telegram" class="btn btn-outline !py-2 !text-xs font-black flex items-center gap-1.5">
+                        <button id="test-telegram" class="btn btn-outline !py-2 !text-xs font-black flex items-center gap-1.5" title="Gửi tin nhắn test mẫu">
                             <i data-lucide="zap" class="w-3.5 h-3.5 text-sky-500"></i>Test
+                        </button>
+                        <button id="test-telegram-real" class="btn btn-outline !py-2 !text-xs font-black flex items-center gap-1.5" title="Gửi thông báo thực tế của hôm nay">
+                            <i data-lucide="bell" class="w-3.5 h-3.5 text-amber-500"></i>Simulate
                         </button>
                         <button id="save-telegram" class="btn btn-primary !py-2 !text-xs font-black">Sync Bot</button>
                     </div>
@@ -1644,7 +1647,17 @@ async function renderSettings(container) {
             await API.testTelegram();
             toast('Test message sent ✓ — check Telegram!', 'success');
         } catch (e) { toast('Test failed: ' + e.message, 'error'); }
-        finally { btn.disabled = false; btn.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-sky-500"></i>Test'; lucide.createIcons({ nodes: [btn] }); }
+        finally { btn.disabled = false; btn.innerHTML = `<i data-lucide="zap" class="w-3.5 h-3.5 text-sky-500"></i>Test`; lucide.createIcons({ nodes: [btn] }); }
+    };
+
+    $('#test-telegram-real').onclick = async () => {
+        const btn = $('#test-telegram-real');
+        btn.disabled = true; btn.textContent = 'Sending...';
+        try {
+            await API.testTelegramReal();
+            toast('Live notification simulated ✓', 'success');
+        } catch (e) { toast('Simulation failed: ' + e.message, 'error'); }
+        finally { btn.disabled = false; btn.innerHTML = `<i data-lucide="bell" class="w-3.5 h-3.5 text-amber-500"></i>Simulate`; lucide.createIcons({ nodes: [btn] }); }
     };
     $('#register-webhook').onclick = async () => {
         const webhookUrl = ($('#tg-webhook-url').value || '').trim();
