@@ -2,8 +2,9 @@
 // Routes by 'action' query parameter or body field
 
 const { setPeriodState, setIsOff, setIsOffRange, setDayModeOverride, getFullDayState, getTelegramConfig, kv } = require('../lib/kv');
-const { saveSwapOverride, deleteSwapOverride, logSystemEvent } = require('../lib/db');
+const { logSystemEvent } = require('../lib/db');
 const { sendChat } = require('../lib/chat');
+const { sendTelegram } = require('../lib/telegram');
 const { getVietnamDateKey, getCurrentPeriod } = require('../lib/time');
 const { authenticate } = require('../lib/auth');
 const { Octokit } = require('@octokit/rest');
@@ -115,11 +116,23 @@ const handlers = {
     await setWfhOverride(dateKey);
     await triggerGitHubWorkflow();
 
-    await sendChat({
-      title: 'ℹ️ Đã kích hoạt WFH (Sáng)',
-      message: `Đã gửi lệnh kích hoạt Punch In (AM) ngay lập tức. Hệ thống cũng sẽ tự động chạy Punch Out (PM) vào khoảng 18:00.`,
-      icon: 'info',
-    });
+    // Local dev: if PAT is missing, simulate a successful punch indicator on dashboard
+    if (!githubPat) {
+      await setPeriodState(dateKey, 'am', 'manual_done', 'api', { message: 'Simulated on local (No GHA)' });
+    }
+
+    await logSystemEvent('trigger_gha', { date: dateKey }, 'api').catch(e => console.warn(e.message));
+
+    const msg = `🚀 <b>GHA Triggered: WFH Hôm Nay</b>\n━━━━━━━━━━━━━━━━\n📅 Ngày: ${dateKey}\nHệ thống đã gửi lệnh kích hoạt Punch In (AM) ngay lập tức.\n\nPM (Chiều) sẽ tự động chạy vào ~18:00.`;
+
+    await Promise.all([
+      sendChat({
+        title: 'ℹ️ Đã kích hoạt WFH (Sáng)',
+        message: `Đã gửi lệnh kích hoạt Punch In (AM) ngay lập tức. Hệ thống cũng sẽ tự động chạy Punch Out (PM) vào khoảng 18:00.`,
+        icon: 'info',
+      }),
+      sendTelegram({ text: msg }).catch(e => console.warn('[markWfhToday] telegram skip:', e.message))
+    ]);
 
     return ok({ triggered: true, override_set: true });
   },

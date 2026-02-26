@@ -300,6 +300,7 @@ export function renderRecentHistoryChanges(events) {
         'mark_done': 'check-circle',
         'undo_done': 'refresh-cw',
         'update_config': 'settings',
+        'trigger_gha': 'zap',
         'default': 'edit-3'
     };
 
@@ -309,6 +310,7 @@ export function renderRecentHistoryChanges(events) {
         'mark_done': 'text-green-500',
         'undo_done': 'text-sky-500',
         'update_config': 'text-primary',
+        'trigger_gha': 'text-yellow-500',
         'default': 'text-muted-foreground'
     };
 
@@ -326,6 +328,7 @@ export function renderRecentHistoryChanges(events) {
             else if (ev.event_type === 'mark_done') detail = `Marked ${data.period.toUpperCase()} done`;
             else if (ev.event_type === 'undo_done') detail = `Reset ${data.period.toUpperCase()} to pending`;
             else if (ev.event_type === 'update_config') detail = `System ${data.isEnabled ? 'Enabled' : 'Disabled'}`;
+            else if (ev.event_type === 'trigger_gha') detail = `Triggered GHA Punch for ${data.date}`;
         } catch (e) { }
 
         return `
