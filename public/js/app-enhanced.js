@@ -742,7 +742,7 @@ async function renderDashboard(container) {
                     const mode = st.effectiveMode || st.scheduleMode || 'wio';
                     const icon = mode === 'wfh' ? 'laptop' : mode === 'off' ? 'moon' : 'building-2';
                     const color = mode === 'wfh' ? 'text-primary' : mode === 'off' ? 'text-orange-500' : 'text-muted-foreground';
-                    const label = mode === 'wfh' ? 'Home Office' : mode === 'off' ? 'Day Off' : 'At Office';
+                    const label = mode === 'wfh' ? 'WFH Home' : mode === 'off' ? 'Day Off' : 'Office Day';
 
                     const container = $('#tomorrow-content');
                     container.innerHTML = `
@@ -1207,7 +1207,7 @@ async function renderHistory(container) {
     const loadChangesHistory = async () => {
         const changesList = $('#changes-list');
         try {
-            const events = await API.getEvents(['swap_day'], 100);
+            const events = await API.getEvents(['swap_day', 'toggle_off', 'clear_override'], 100);
             if (!events || !events.events || events.events.length === 0) {
                 changesList.innerHTML = '<div class="card !border-dashed text-center opacity-40 font-bold py-20">No schedule changes recorded</div>';
                 return;
@@ -1238,7 +1238,7 @@ async function renderHistory(container) {
                     <div class="flex items-center gap-6 flex-1">
                         <div class="flex-1 space-y-1">
                             <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400">Schedule change</span>
+                                <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 capitalize">${ev.event_type.replace(/_/g, ' ')}</span>
                             </div>
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 ${modeBadge(fromMode)}
